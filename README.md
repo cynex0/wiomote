@@ -8,6 +8,11 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 WIOmote consists of two main components:
 
 - **WIO Terminal:** The hardware component responsible for receiving commands and controlling devices.
+Used sensors:
+    - Infrared Emitter (IR 940nm, built-in)
+    - Infrared Receiver (Grove - Infrared Emitter)
+    - Buzzer (built-in)
+    - Vibration Motor (Grove - Vibration Motor)
 
 - **Android Application:** The mobile application responsible for sending commands to the WIO Terminal and establishing wireless communication.
 
