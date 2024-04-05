@@ -1,0 +1,7 @@
+stages:
+- test
+sast:
+  stage: test
+include:
+- template: Security/SAST.gitlab-ci.yml # Static Application Security Testing template
+- template: Code-Quality.gitlab-ci.yml  # Code Climate template
