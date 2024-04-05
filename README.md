@@ -1,6 +1,7 @@
 # WIOmote
 [![GitLab Wiki Badge](https://img.shields.io/badge/GitLab-Wiki-d94a34.svg?logo=gitlab)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote.wiki.git) [![Pipeline Status](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/badges/main/pipeline.svg)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/pipelines)
 \
+\
 A wireless controlled configurable remote built on the [WIO Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html).
 
 ## Project Description
@@ -18,11 +19,6 @@ For basic functions like turning on and off or basic navigation, the terminal ca
 The system's architecture is based on an *MQTT Broker* alongside various hardware components (infrared receiver and emiter, buzzer, vibrator) controlled by software modules. These modules receive commands from the broker, manage configurations, and interpret infrared configuration data.
 
 - **WIO Terminal:** The hardware component responsible for receiving commands and controlling devices.
-Used sensors:
-    - Infrared Emitter (IR 940nm, built-in)
-    - Infrared Receiver (Grove - Infrared Emitter)
-    - Buzzer (built-in)
-    - Vibration Motor (Grove - Vibration Motor)
 
 - **Android App:** The mobile application responsible for sending commands to the WIO Terminal and establishing wireless communication.
 
