@@ -3,3 +3,9 @@ include:
 
 stages:
   - test
+
+test:
+  artifacts:
+    paths: 
+      - /app
+  
