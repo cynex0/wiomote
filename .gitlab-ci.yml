@@ -1,6 +1,0 @@
-include:
-  - template: Jobs/Code-Quality.gitlab-ci.yml
-
-stages:
-  - test
-  
