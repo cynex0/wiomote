@@ -1,4 +1,4 @@
-image: openjdk:8-jdk
+image: openjdk:21-jdk
 
 variables:
 
