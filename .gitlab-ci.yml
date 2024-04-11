@@ -54,6 +54,8 @@ stages:
 
 build:
   stage: build
+  tags:
+    - docker-build
   script:
     - ./gradlew assembleDebug # command to build and debug
   only:
