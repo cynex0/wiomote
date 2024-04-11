@@ -30,8 +30,8 @@ The team has considered the following sensors:
 
 | Sensor                                       | URL                                                           |
 |----------------------------------------------|---------------------------------------------------------------|
-| Infrared Emitter (IR 940nm, built-in)        | -                                                             |
-| Infrared Receiver (Grove - Infrared Emitter) | [link](https://wiki.seeedstudio.com/Grove-Infrared_Receiver/) |
+| Infrared Emitter (Grove - Infrared Emitter)  | [link](https://wiki.seeedstudio.com/Grove-Infrared_Emitter)   |
+| Infrared Receiver (Grove - Infrared Receiver)| [link](https://wiki.seeedstudio.com/Grove-Infrared_Receiver/) |
 | Buzzer (built-in)                            | -                                                             |
 | Vibration Motor (Grove - Vibration Motor)    | [link](https://wiki.seeedstudio.com/Grove-Vibration_Motor/)   |
 
