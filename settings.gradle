@@ -1,2 +1,2 @@
-rootProject.name = "WIOmote"
+rootProject.name = "wiomote"
 include ':app'
