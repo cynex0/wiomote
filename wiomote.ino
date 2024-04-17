@@ -62,6 +62,11 @@ void setup(){
 
 	pinMode( MoPin, OUTPUT );
 
+  for(uint8_t i = 0; i < 6; i++){
+    commandMap[i].rawData = new uint16_t[0];
+    commandMap[i].dataLength = 0;
+  }
+
 
 	tft.begin();							 // LCD initialization
 	tft.setRotation(3);						 // Setting LCD rotation
@@ -146,7 +151,7 @@ void loop(){
     if (pressed != -1) {
       Command command = commandMap[pressed];
 
-			if (command.rawData != nullptr){
+			if (command.dataLength != 0){
         sendData(command.rawData, command.dataLength);
 				digitalWrite(MoPin, HIGH); // vibrate if data sent
 				delay(250);
