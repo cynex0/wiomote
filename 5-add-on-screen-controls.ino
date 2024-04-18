@@ -1,17 +1,15 @@
-#include <IRLib_HashRaw.h>
-#include <IRLibCombo.h> 
-#include <IRLibRecvPCI.h>   // IR receiver libraries
+//#include <IRLib_HashRaw.h>
+//#include <IRLibCombo.h> 
+//#include <IRLibRecvPCI.h>          // IR receiver libraries
 
-#include <TFT_eSPI.h>       // LCD library
+#include <TFT_eSPI.h>                // LCD library
 
-TFT_eSPI tft;    // Initializing tft LCD library
-TFT_eSprite sprite = TFT_eSprite(&tft);  // Initializing buffer
-
-// TODO: Integrate with IR signals, emitter, reciever
-// OK text on button in white?
+TFT_eSPI tft;                             // Initializing tft LCD library
+TFT_eSprite sprite = TFT_eSprite(&tft);   // Initializing buffer
 
 // Declaring UI Constants
 const int CIRCLE_COLOR = TFT_BLUE;
+const int OUTER_CIRCLE_COLOR = TFT_WHITE;
 const int CIRCLE_RADIUS = 45;
 const int CENTER_X = 160;           // Middle point of screen X-axis
 const int CENTER_Y = 120;           // Middle point of screen Y-axis
@@ -30,12 +28,24 @@ const int leftButton = WIO_5S_LEFT;
 const int rightButton = WIO_5S_RIGHT;
 const int okButton = WIO_5S_PRESS;
 
-void drawUI() {  // Method to draw the UI on screen
+// Define button text, size and color
+const String buttonText = "OK";
+const int textSize = 3;
+const int textColor = TFT_WHITE;
+
+void drawUI() {   // Method to draw the UI on screen
 
     tft.fillScreen(BACKGROUND_COLOR);   // Drawing black background
+
+    tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);  // Draw outline of middle circle
+    tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);            // Colorfill middle circle
+
+    // Set text size, position and color
+    tft.setTextSize(textSize);
+    tft.setTextColor(textColor);
+    tft.setTextDatum(MC_DATUM);
     
-    tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR); // Draw middle circle
-    tft.fillCircle(CIRCLE_COLOR);
+    tft.drawString(buttonText, CENTER_X, CENTER_Y);   // Draw center button text
 
     // Draw top arrow
     tft.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
@@ -48,7 +58,7 @@ void drawUI() {  // Method to draw the UI on screen
     // Draw bottom arrow
     tft.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X - ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
     tft.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
-    
+
     // Draw left arrow
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
@@ -70,9 +80,6 @@ void setup() {
     drawUI(); // Draw the UI
 }
 
- // TODO: Integrate with real IR emitter signals
-
-// For testing  
 void loop() {
     
     // Check button press and print message if pressed
@@ -97,5 +104,3 @@ void loop() {
         Serial.println("OK Button");
     }
 }
-
-
