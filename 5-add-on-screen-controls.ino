@@ -58,7 +58,7 @@ void setup() {
 
     Serial.begin(9600);
     tft.begin();
-    tft.setRotation(0);
+    tft.setRotation(3);
 
     // Initialize button pins
     pinMode(upButton, INPUT); 
