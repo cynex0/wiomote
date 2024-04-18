@@ -34,7 +34,7 @@
             android:textColor="?attr/colorOnBackground"
             android:textSize="@dimen/title_text_size" />
 
-        <com.google.android.material.button.MaterialButton
+        <se.gu.wiomote.views.Button
             android:id="@+id/location"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -52,9 +52,48 @@
             tools:ignore="RtlHardcoded" />
 
         <LinearLayout
-            android:id="@+id/setup_container"
+            android:id="@+id/bluetooth_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:divider="@drawable/empty_divider"
+            android:orientation="vertical"
+            android:showDividers="middle"
+            android:translationZ="-1px"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/archivo_semi_expanded_regular"
+                android:letterSpacing="-0.02"
+                android:text="@string/bluetooth"
+                android:textColor="?attr/colorOnBackground"
+                android:textSize="@dimen/title_text_size" />
+
+            <se.gu.wiomote.views.Button
+                android:id="@+id/bluetooth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/button_tint"
+                android:drawableLeft="@drawable/ic_error"
+                android:fontFamily="@font/dmsans_regular"
+                android:gravity="start|center_vertical"
+                android:lineHeight="@dimen/button_text_size"
+                android:padding="@dimen/button_padding"
+                android:text="@string/bluetooth_connection"
+                android:textColor="@color/button_content_tint"
+                android:textSize="@dimen/button_text_size"
+                app:cornerRadius="@dimen/button_corner_radius"
+                app:iconPadding="@dimen/button_icon_padding"
+                tools:ignore="RtlHardcoded" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/network_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:animateLayoutChanges="true"
             android:divider="@drawable/empty_divider"
             android:orientation="vertical"
             android:showDividers="middle"
@@ -74,18 +113,62 @@
                 android:id="@+id/network"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:backgroundTint="@color/button_error_tint"
+                android:backgroundTint="@color/button_tint"
                 android:drawableLeft="@drawable/ic_error"
                 android:fontFamily="@font/dmsans_regular"
                 android:gravity="start|center_vertical"
                 android:lineHeight="@dimen/button_text_size"
                 android:padding="@dimen/button_padding"
-                android:text="@string/no_wifi"
-                android:textColor="@color/button_content_error_tint"
+                android:text="@string/network_connection"
+                android:textColor="@color/button_content_tint"
                 android:textSize="@dimen/button_text_size"
                 app:cornerRadius="@dimen/button_corner_radius"
                 app:iconPadding="@dimen/button_icon_padding"
                 tools:ignore="RtlHardcoded" />
+
+            <LinearLayout
+                android:id="@+id/network_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/ssid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/archivo_semi_expanded_regular"
+                    android:letterSpacing="-0.02"
+                    android:textColor="?attr/colorOnBackground"
+                    android:textSize="@dimen/title_text_size" />
+
+                <EditText
+                    android:id="@+id/password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/dmsans_regular"
+                    android:hint="@string/password"
+                    android:inputType="textPassword"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/send"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@color/button_tint"
+                    android:enabled="false"
+                    android:fontFamily="@font/dmsans_regular"
+                    android:gravity="start|center_vertical"
+                    android:lineHeight="@dimen/button_text_size"
+                    android:padding="@dimen/button_padding"
+                    android:text="@string/waiting"
+                    android:textColor="@color/button_content_tint"
+                    android:textSize="@dimen/button_text_size"
+                    app:cornerRadius="@dimen/button_corner_radius"
+                    tools:ignore="RtlHardcoded" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

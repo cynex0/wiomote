@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WIOmote</string>
-    <string name="permission">Location Access</string>
+    <string name="permission">Location</string>
     <string name="network">Network</string>
-    <string name="no_wifi">Please connect to Wi-Fi ↗</string>
-    <string name="location">Location permission needed to connect the terminal ↗</string>
+    <string name="connect">Send network data ↗</string>
+    <string name="password">Password</string>
+    <string name="waiting">Waiting for terminal…</string>
+    <string name="network_connection">Please connect to the Wi-Fi network the terminal should use ↗</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_connection">Bluetooth needed to connect to th terminal ↗</string>
+    <string name="location">Location needed to connect the terminal ↗</string>
 </resources>

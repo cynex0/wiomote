@@ -36,6 +36,6 @@
         <item name="android:navigationBarColor">?attr/backgroundColor</item>
         <item name="android:navigationBarDividerColor">?attr/backgroundColor</item>
         <item name="android:statusBarColor">?attr/backgroundColor</item>
-        <item name="android:background">?attr/backgroundColor</item>
+        <item name="android:windowBackground">?attr/backgroundColor</item>
     </style>
 </resources>
