@@ -168,6 +168,31 @@
                     app:cornerRadius="@dimen/button_corner_radius"
                     tools:ignore="RtlHardcoded" />
 
+                <EditText
+                    android:id="@+id/mqttMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/dmsans_regular"
+                    android:hint="@string/message"
+                    android:inputType="text"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mqttSend"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="@color/button_tint"
+                    android:enabled="false"
+                    android:fontFamily="@font/dmsans_regular"
+                    android:gravity="start|center_vertical"
+                    android:lineHeight="@dimen/button_text_size"
+                    android:padding="@dimen/button_padding"
+                    android:text="@string/mqtt_send"
+                    android:textColor="@color/button_content_tint"
+                    android:textSize="@dimen/button_text_size"
+                    app:cornerRadius="@dimen/button_corner_radius"
+                    tools:ignore="RtlHardcoded" />
+
             </LinearLayout>
 
         </LinearLayout>
