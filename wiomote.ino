@@ -19,7 +19,7 @@ TFT_eSprite sprite = TFT_eSprite(&tft);   // Initializing buffer
 #define ARROW_LENGTH ARROW_TOP_OFFSET - ARROW_BASE_OFFSET;  // Value of arrow length
 #define ARROW_COLOR TFT_WHITE;
 
-#define BACKGROUND_COLOR                        TFT_BLACK;
+#define BACKGROUND_COLOR                        TFT_BLACK;  // Define screen color
 
 // Defining buttons
 #define upButton        WIO_5S_UP;
@@ -45,7 +45,7 @@ void drawUI() {   // Method to draw the UI on screen
     tft.setTextColor(textColor);
     tft.setTextDatum(MC_DATUM);
     
-    tft.drawString(buttonText, CENTER_X, CENTER_Y);                            // Draw center button text
+    tft.drawString(buttonText, CENTER_X, CENTER_Y); // Draw center button text
 
     // Draw top arrow
     tft.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
@@ -71,11 +71,11 @@ void setup() {
     tft.setRotation(3);
 
     // Initialize button pins
-    pinMode(upButton, INPUT); 
-    pinMode(downButton, INPUT);
-    pinMode(leftButton, INPUT);
-    pinMode(rightButton, INPUT);
-    pinMode(okButton, INPUT);
+    pinMode(upButton,    INPUT_PULLUP); 
+    pinMode(downButton,  INPUT_PULLUP);
+    pinMode(leftButton,  INPUT_PULLUP);
+    pinMode(rightButton, INPUT_PULLUP);
+    pinMode(okButton,    INPUT_PULLUP);
 
     drawUI(); // Draw the UI
 }
