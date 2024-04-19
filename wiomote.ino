@@ -4,12 +4,15 @@
 #include <IRLibRecvPCI.h>
 #include <TFT_eSPI.h>
 
+
+#define BTN_COUNT 6
 #define POWER_BTN 0
-#define UP_BTN 1
+#define UP_BTN    1
 #define RIGHT_BTN 2
-#define DOWN_BTN 3
-#define LEFT_BTN 4
+#define DOWN_BTN  3
+#define LEFT_BTN  4
 #define PRESS_BTN 5
+#define MODE_BTN  WIO_KEY_C
 
 TFT_eSPI tft;						 // Initializing TFT LCD library
 TFT_eSprite spr = TFT_eSprite(&tft); // Initializing the buffer
@@ -27,13 +30,17 @@ bool receiveMode = false;
 
 int MoPin = D0;
 
+// states for mode switch button to prevent hold-down spam
+bool modeBtnState;
+bool prevModeBtnState = HIGH;
+
 struct Command {
   uint16_t *rawData;
   uint8_t dataLength;
 };
 
 
-Command *commandMap = new Command[6]; // char* -> char* map, maps buttons to commands
+Command *commandMap = new Command[BTN_COUNT]; // maps buttons to commands
 
 void resetUI(){
 	// Draw action button
@@ -62,9 +69,9 @@ void setup(){
 
 	pinMode( MoPin, OUTPUT );
 
-  for(uint8_t i = 0; i < 6; i++){
+	for(uint8_t i = 0; i < BTN_COUNT; i++){
     commandMap[i].rawData = new uint16_t[0];
-    commandMap[i].dataLength = 0;
+	  commandMap[i].dataLength = 0;
   }
 
 
@@ -90,6 +97,16 @@ void sendData(uint16_t *data, uint8_t dataLength){
 	if (data != nullptr){
 		emitter.send(data, dataLength, CARRIER_FREQUENCY_KHZ); // Pass the array, array length, carrier frequency
 
+    Serial.println();
+    Serial.print("Signal sent: ["); Serial.print(dataLength); Serial.print("]{");
+    for (uint8_t i = 0; i < dataLength; i++) {
+      Serial.print(data[i]);
+      if (i != dataLength - 1) {
+        Serial.print(", ");
+      }
+    }
+    Serial.println("}");
+
 		tft.fillCircle(X, Y, RADIUS, COLOR); // Fill circle with color
 		delay(200);
 
@@ -98,19 +115,36 @@ void sendData(uint16_t *data, uint8_t dataLength){
 	}
 }
 
-void switchToReceive(){
-	receiveMode = true;
+void switchMode(){
+  if (receiveMode) {
+    // switch to emit
+		resetUI();
+		receiver.disableIRIn();
+  } else {
+    receiver.enableIRIn();
 
-	receiver.enableIRIn();
+	  spr.fillSprite(TFT_WHITE); // Fill screen with white
+	  spr.setTextColor(TFT_BLACK);
+	  spr.drawString("RECORD", 127, 115);
+  	spr.pushSprite(0, 0);
+  }
 
-	spr.fillSprite(TFT_WHITE); // Fill screen with white
-	spr.setTextColor(TFT_BLACK);
-	spr.drawString("RECORD", 127, 115);
-	spr.pushSprite(0, 0);
+	receiveMode = !receiveMode;
 }
 
+boolean allButtonsMapped() {
+	for (uint8_t i = 0; i < BTN_COUNT; i++) {
+    if (commandMap[i].dataLength == 0) return false;
+  }
+	return true;
+}
 
 void receive(){
+	if (allButtonsMapped()) {
+		switchMode();
+		return;
+	}
+
 	receiver.enableIRIn();
 
 	if (receiver.getResults()){
@@ -129,24 +163,27 @@ void receive(){
     int chosenButton;
     do {
       chosenButton = buttonPressed();
+      if (digitalRead(MODE_BTN) == LOW){
+			  switchMode();
+		  }
     } while(chosenButton == -1); // wait for a button press
     commandMap[chosenButton] = recCommand; // write the received command to the map
-
-		resetUI();
-		receiver.disableIRIn();
-		Serial.println("Recorded data.");
-		receiveMode = false;
 	}
 }
 
 void loop(){
+  modeBtnState = digitalRead(MODE_BTN);
+  if (modeBtnState != prevModeBtnState) {
+    if (modeBtnState == LOW){
+		  switchMode();
+    }
+    delay(50); // prevent button bouncing
+  }
+  prevModeBtnState = modeBtnState;
+
 	if (receiveMode){
 		receive();
 	} else { // Detecting button presses
-    if (digitalRead(WIO_KEY_C) == LOW){
-			switchToReceive(); // Enter receive mode
-		}
-
     int pressed = buttonPressed();
     if (pressed != -1) {
       Command command = commandMap[pressed];
@@ -159,4 +196,19 @@ void loop(){
 			}
     }		
 	}
+
+  // print configured buttons on screen for debug
+  if (commandMap[POWER_BTN].dataLength != 0)
+    spr.drawString("POWER", 0, 0);
+  if (commandMap[UP_BTN].dataLength != 0)
+    spr.drawString("UP", 0, 20);
+  if (commandMap[LEFT_BTN].dataLength != 0)
+    spr.drawString("LEFT", 0, 40);
+  if (commandMap[RIGHT_BTN].dataLength != 0)
+    spr.drawString("RIGHT", 0, 60);
+  if (commandMap[DOWN_BTN].dataLength != 0)
+    spr.drawString("DOWN", 0, 80);
+  if (commandMap[PRESS_BTN].dataLength != 0)
+    spr.drawString("OK", 0, 100);
+  spr.pushSprite(0,0);
 }
