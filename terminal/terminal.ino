@@ -35,8 +35,8 @@ bool oldDeviceConnected = false;
 // MQTT and Wi-Fi constants
 #define mqtt_server "broker.hivemq.com"
 #define MQTT_PORT 1883
-#define topicOut "dit113/testwio12321Out"
-#define topicIn "dit113/testwio12321In"
+#define topicOut "wiomote/connection/terminal"
+#define topicIn "wiomote/connection/app"
 
 
 // MQTT variables
