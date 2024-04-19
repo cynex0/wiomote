@@ -190,25 +190,48 @@ void loop(){
 
 			if (command.dataLength != 0){
         sendData(command.rawData, command.dataLength);
-				digitalWrite(MoPin, HIGH); // vibrate if data sent
+        digitalWrite(MoPin, HIGH); // vibrate if data sent
+        switch(pressed) {
+          case POWER_BTN:
+            spr.fillCircle(5, 10, 4, TFT_GREEN);
+            break;
+          case UP_BTN:
+            spr.fillCircle(5, 30, 4, TFT_GREEN);
+            break;
+          case LEFT_BTN:
+            spr.fillCircle(5, 50, 4, TFT_GREEN);
+            break;
+          case RIGHT_BTN:
+            spr.fillCircle(5, 70, 4, TFT_GREEN);
+            break;
+          case DOWN_BTN:
+            spr.fillCircle(5, 90, 4, TFT_GREEN);
+            break;
+          case PRESS_BTN:
+            spr.fillCircle(5, 110, 4, TFT_GREEN);
+            break;
+        }
+        spr.pushSprite(0,0);
 				delay(250);
 				digitalWrite(MoPin, LOW);
+        spr.fillRect(0, 0, 10, 120, TFT_BLACK);
+        spr.pushSprite(0,0);
 			}
     }		
 	}
 
   // print configured buttons on screen for debug
   if (commandMap[POWER_BTN].dataLength != 0)
-    spr.drawString("POWER", 0, 0);
+    spr.drawString("POWER", 10, 0);
   if (commandMap[UP_BTN].dataLength != 0)
-    spr.drawString("UP", 0, 20);
+    spr.drawString("UP", 10, 20);
   if (commandMap[LEFT_BTN].dataLength != 0)
-    spr.drawString("LEFT", 0, 40);
+    spr.drawString("LEFT", 10, 40);
   if (commandMap[RIGHT_BTN].dataLength != 0)
-    spr.drawString("RIGHT", 0, 60);
+    spr.drawString("RIGHT", 10, 60);
   if (commandMap[DOWN_BTN].dataLength != 0)
-    spr.drawString("DOWN", 0, 80);
+    spr.drawString("DOWN", 10, 80);
   if (commandMap[PRESS_BTN].dataLength != 0)
-    spr.drawString("OK", 0, 100);
+    spr.drawString("OK", 10, 100);
   spr.pushSprite(0,0);
 }
