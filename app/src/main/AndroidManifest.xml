@@ -29,6 +29,11 @@
             android:name=".activities.Setup"
             android:exported="true"
             android:windowSoftInputMode="adjustPan" />
+
+        <activity
+            android:name=".activities.Mqtt"
+            android:exported="true"
+            android:windowSoftInputMode="adjustPan" />
     </application>
 
 </manifest>

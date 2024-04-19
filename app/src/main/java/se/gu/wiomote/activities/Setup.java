@@ -64,16 +64,11 @@ public class Setup extends AppCompatActivity {
     private TextView ssid;
     private String bssid;
     private EditText password;
-    private EditText mqttMessage;
-    private MaterialButton sendMqtt;
-    WioMqttClient mqttClient;
 
     @SuppressLint({"Recycle"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mqttClient = new WioMqttClient();
 
         setContentView(R.layout.setup);
 
@@ -90,9 +85,6 @@ public class Setup extends AppCompatActivity {
         ssid = findViewById(R.id.ssid);
         password = findViewById(R.id.password);
         MaterialButton send = findViewById(R.id.send);
-
-        mqttMessage = findViewById(R.id.mqttMessage);
-        sendMqtt = findViewById(R.id.mqttSend);
 
         Animator translateUp = ObjectAnimator.ofPropertyValuesHolder(
                 container, PropertyValuesHolder.ofFloat("alpha", -4f, 1f));
@@ -236,11 +228,6 @@ public class Setup extends AppCompatActivity {
 
                         send.setEnabled(true);
                         send.setText(R.string.connect);
-
-                        sendMqtt.setOnClickListener(v -> {
-                            mqttClient.publish(String.valueOf(mqttMessage.getText()));
-                        });
-                        sendMqtt.setEnabled(true);
                     }
 
                     @Override

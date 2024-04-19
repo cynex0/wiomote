@@ -19,5 +19,9 @@ public class Main extends AppCompatActivity {
 
             startActivity(intent);
         });
+
+        findViewById(R.id.mqtt).setOnClickListener(v -> {
+            startActivity(new Intent(Main.this, Mqtt.class));
+        });
     }
 }
