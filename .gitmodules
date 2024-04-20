@@ -1,3 +1,6 @@
 [submodule "wiomote.wiki"]
 	path = wiomote.wiki
 	url = https://git.chalmers.se/courses/dit113/2024/group-9/wiomote.wiki.git
+[submodule "wiomote_irsendrev"]
+	path = wiomote_irsendrev
+	url = https://git.chalmers.se/courses/dit113/2024/group-9/wiomote_irsendrev.git

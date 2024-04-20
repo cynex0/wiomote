@@ -4,7 +4,6 @@
 #include <IRLibRecvPCI.h>
 #include <TFT_eSPI.h>
 
-
 #define BTN_COUNT 6
 #define POWER_BTN 0
 #define UP_BTN    1
@@ -14,17 +13,41 @@
 #define PRESS_BTN 5
 #define MODE_BTN  WIO_KEY_C
 
+// Declaring UI Constants
+#define CIRCLE_COLOR        TFT_BLUE
+#define OUTER_CIRCLE_COLOR TFT_WHITE
+#define CIRCLE_RADIUS             45
+#define CENTER_X                 160  // Middle point of screen X-axis
+#define CENTER_Y                 120  // Middle point of screen Y-axis
+
+#define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
+#define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
+#define ARROW_LENGTH       40  // Value of arrow length
+#define ARROW_COLOR TFT_WHITE
+
+#define BACKGROUND_COLOR TFT_BLACK  // Define screen color
+
+// Defining buttons
+#define upButton        WIO_5S_UP
+#define downButton    WIO_5S_DOWN
+#define leftButton    WIO_5S_LEFT
+#define rightButton  WIO_5S_RIGHT
+#define okButton     WIO_5S_PRESS
+
+// Define button text, size and color
+#define buttonText     "OK"
+#define textSize          3
+#define textColor TFT_WHITE
+
+
 TFT_eSPI tft;						 // Initializing TFT LCD library
 TFT_eSprite spr = TFT_eSprite(&tft); // Initializing the buffer
 
 IRsendRaw emitter;		  // Initializing IR Emitter
 IRrecvPCI receiver(BCM3); // Initializing IR Receiver
 
+
 const int CARRIER_FREQUENCY_KHZ = 38;
-const int X = 160;
-const int Y = 120;
-const int RADIUS = 50;
-const int COLOR = TFT_BLUE;
 
 bool receiveMode = false;
 
@@ -43,26 +66,47 @@ struct Command {
 Command *commandMap = new Command[BTN_COUNT]; // maps buttons to commands
 
 void resetUI(){
-	// Draw action button
-	spr.fillSprite(TFT_BLACK);
-	spr.setTextSize(2);
-	spr.setTextColor(TFT_WHITE);
-	spr.drawCircle(X, Y, RADIUS, COLOR);
-	spr.drawString("EMIT", 137, 115);
 
-	// Push sprite changes
-	spr.pushSprite(0, 0);
+    spr.fillSprite(BACKGROUND_COLOR);                                           // Drawing black background
+
+    spr.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);  // Draw outline of middle circle
+    spr.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);            // Colorfill middle circle
+
+    // Set text size, position and color
+    spr.setTextSize(textSize);
+    spr.setTextColor(textColor);
+    
+    spr.drawString(buttonText, CENTER_X, CENTER_Y); // Draw center button text
+
+    // Draw top arrow
+    spr.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
+    spr.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X - ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
+
+    // Draw right arrow
+    spr.drawLine(CENTER_X + ARROW_TOP_OFFSET, CENTER_Y, CENTER_X + ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
+    spr.drawLine(CENTER_X + ARROW_TOP_OFFSET, CENTER_Y, CENTER_X + ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
+
+    // Draw bottom arrow
+    spr.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X - ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
+    spr.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
+
+    // Draw left arrow
+    spr.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
+    spr.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
+
+	  // Push sprite changes
+	  spr.pushSprite(0, 0);
 }
 
 void setup(){
 	Serial.begin(9600); // Start serial
 
 	// Set up input
-	pinMode(WIO_5S_PRESS, INPUT_PULLUP);
-	pinMode(WIO_5S_UP, INPUT_PULLUP);
-  pinMode(WIO_5S_DOWN, INPUT_PULLUP);
-  pinMode(WIO_5S_LEFT, INPUT_PULLUP);
-  pinMode(WIO_5S_RIGHT, INPUT_PULLUP);
+	pinMode(okButton, INPUT_PULLUP);
+	pinMode(upButton, INPUT_PULLUP);
+  pinMode(downButton, INPUT_PULLUP);
+  pinMode(leftButton, INPUT_PULLUP);
+  pinMode(rightButton, INPUT_PULLUP);
 	pinMode(WIO_KEY_A, INPUT_PULLUP);
 	pinMode(WIO_KEY_B, INPUT_PULLUP);
 	pinMode(WIO_KEY_C, INPUT_PULLUP);
@@ -75,9 +119,10 @@ void setup(){
   }
 
 
-	tft.begin();							 // LCD initialization
+	tft.begin();							     // LCD initialization
 	tft.setRotation(3);						 // Setting LCD rotation
 	spr.createSprite(TFT_HEIGHT, TFT_WIDTH); // Creating the buffer
+  spr.setTextDatum(MC_DATUM);
 
 	resetUI();
 }
@@ -106,12 +151,6 @@ void sendData(uint16_t *data, uint8_t dataLength){
       }
     }
     Serial.println("}");
-
-		tft.fillCircle(X, Y, RADIUS, COLOR); // Fill circle with color
-		delay(200);
-
-		spr.pushSprite(0, 0); // Clear UI changes
-		delay(50);
 	}
 }
 
@@ -125,7 +164,8 @@ void switchMode(){
 
 	  spr.fillSprite(TFT_WHITE); // Fill screen with white
 	  spr.setTextColor(TFT_BLACK);
-	  spr.drawString("RECORD", 127, 115);
+    spr.setTextSize(2);
+	  spr.drawString("RECORD", CENTER_X, CENTER_Y);
   	spr.pushSprite(0, 0);
   }
 
@@ -221,6 +261,7 @@ void loop(){
 	}
 
   // print configured buttons on screen for debug
+  spr.setTextSize(2);
   if (commandMap[POWER_BTN].dataLength != 0)
     spr.drawString("POWER", 10, 0);
   if (commandMap[UP_BTN].dataLength != 0)
@@ -233,5 +274,7 @@ void loop(){
     spr.drawString("DOWN", 10, 80);
   if (commandMap[PRESS_BTN].dataLength != 0)
     spr.drawString("OK", 10, 100);
+  
   spr.pushSprite(0,0);
+  spr.setTextSize(textSize);
 }
