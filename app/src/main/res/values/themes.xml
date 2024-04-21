@@ -1,9 +1,41 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<resources>
+
     <style name="Base.Theme.WIOmote" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">#006d40</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="colorPrimaryContainer">#4dffac</item>
+        <item name="colorOnPrimaryContainer">#002110</item>
+        <item name="colorSecondary">#4e6355</item>
+        <item name="colorOnSecondary">#ffffff</item>
+        <item name="colorSecondaryContainer">#d1e9d6</item>
+        <item name="colorOnSecondaryContainer">#0c1f14</item>
+        <item name="colorTertiary">#3b6471</item>
+        <item name="colorOnTertiary">#ffffff</item>
+        <item name="colorTertiaryContainer">#bee9f8</item>
+        <item name="colorOnTertiaryContainer">#001f28</item>
+        <item name="colorError">#ba1b1b</item>
+        <item name="colorOnError">#ffffff</item>
+        <item name="colorErrorContainer">#ffdad4</item>
+        <item name="colorOnErrorContainer">#410001</item>
+        <item name="backgroundColor">#fbfdf8</item>
+        <item name="colorOnBackground">#191c1a</item>
+        <item name="colorSurface">#fbfdf8</item>
+        <item name="colorOnSurface">#191c1a</item>
+        <item name="colorSurfaceVariant">#dce5dc</item>
+        <item name="colorOnSurfaceVariant">#404942</item>
+        <item name="colorOutline">#717972</item>
+        <item name="colorSurfaceInverse">#2e312e</item>
+        <item name="colorOnSurfaceInverse">#eff1ec</item>
+        <item name="colorPrimaryInverse">#0ce28f</item>
+
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <style name="Theme.WIOmote" parent="Base.Theme.WIOmote" />
+    <style name="Theme.WIOmote" parent="Base.Theme.WIOmote">
+        <item name="android:navigationBarColor">?attr/backgroundColor</item>
+        <item name="android:navigationBarDividerColor">?attr/backgroundColor</item>
+        <item name="android:statusBarColor">?attr/backgroundColor</item>
+        <item name="android:windowBackground">?attr/backgroundColor</item>
+    </style>
 </resources>

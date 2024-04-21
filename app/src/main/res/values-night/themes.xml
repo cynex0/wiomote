@@ -1,7 +1,33 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<resources>
     <style name="Base.Theme.WIOmote" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">#0ce28f</item>
+        <item name="colorOnPrimary">#00391f</item>
+        <item name="colorPrimaryContainer">#00522f</item>
+        <item name="colorOnPrimaryContainer">#4dffac</item>
+        <item name="colorSecondary">#b5ccba</item>
+        <item name="colorOnSecondary">#213528</item>
+        <item name="colorSecondaryContainer">#374b3e</item>
+        <item name="colorOnSecondaryContainer">#d1e9d6</item>
+        <item name="colorTertiary">#a3cddc</item>
+        <item name="colorOnTertiary">#033541</item>
+        <item name="colorTertiaryContainer">#224c58</item>
+        <item name="colorOnTertiaryContainer">#bee9f8</item>
+        <item name="colorError">#ffb4a9</item>
+        <item name="colorOnError">#680003</item>
+        <item name="colorErrorContainer">#930006</item>
+        <item name="colorOnErrorContainer">#ffb4a9</item>
+        <item name="backgroundColor">#191c1a</item>
+        <item name="colorOnBackground">#e2e3df</item>
+        <item name="colorSurface">#191c1a</item>
+        <item name="colorOnSurface">#e2e3df</item>
+        <item name="colorSurfaceVariant">#404942</item>
+        <item name="colorOnSurfaceVariant">#c0c9c0</item>
+        <item name="colorOutline">#8a938b</item>
+        <item name="colorSurfaceInverse">#e2e3df</item>
+        <item name="colorOnSurfaceInverse">#2e312e</item>
+        <item name="colorPrimaryInverse">#006d40</item>
+
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -2,5 +2,5 @@
 /.idea
 /.vscode
 /app/build
-local.properties
 /terminal/build
+local.properties
