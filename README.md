@@ -24,6 +24,21 @@ The system's architecture is based on an *MQTT Broker* alongside various hardwar
 
 ![Architecture](assets/Architecture.svg)
 
+## Dependencies & Requirements
+The following section lists the dependencies and requirements for the project:
+
+1. [Wio Seeed Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html)
+2. [Arduino IDE](https://www.arduino.cc/en/software)
+2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE).
+    - [Wio Terminal Board Library](https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json)
+    - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
+    - [Arduino Json](https://arduinojson.org/)
+    - [PubSubClient](https://github.com/knolleary/pubsubclient)
+    - [Seeed Arduino rpcBLE](https://github.com/Seeed-Studio/Seeed_Arduino_rpcBLE)
+    - [Seeed Arduino rpcWiFi](https://github.com/Seeed-Studio/Seeed_Arduino_rpcWiFi)
+    - [WIOmote IRLib](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote_irlib)
+3. [Grove Sensor List](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/wikis/home#system-sensors)
+
 ## System Sensors
 
 The team has considered the following sensors:
@@ -35,6 +50,8 @@ The team has considered the following sensors:
 | Buzzer (built-in)                            | -                                                             |
 | Vibration Motor (Grove - Vibration Motor)    | [link](https://wiki.seeedstudio.com/Grove-Vibration_Motor/)   |
 
+## Instalation & Usage
+_To be added during Sprint 2_
 
 ## Acknowledgments
 
