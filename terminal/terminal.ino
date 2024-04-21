@@ -131,6 +131,11 @@ void resetUI(){
     // Draw left arrow
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
+
+    // Draw power icon
+    tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
+    tft.drawCircle(15, 22, 6, ARROW_COLOR);
+    tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
   } else {
     tft.fillScreen(TFT_WHITE); // Fill screen with white
 	  tft.setTextColor(TFT_BLACK);
