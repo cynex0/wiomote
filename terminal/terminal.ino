@@ -13,14 +13,16 @@
 #include <IRLibRecvPCI.h>
 #include <TFT_eSPI.h>
 
-#define BTN_COUNT 6
-#define POWER_BTN 0
-#define UP_BTN    1
-#define RIGHT_BTN 2
-#define DOWN_BTN  3
-#define LEFT_BTN  4
-#define PRESS_BTN 5
-#define MODE_BTN  WIO_KEY_C
+// #define DEBUG // debugging mode
+
+// Button indexes for the array acting as a map
+#define BTN_COUNT       6
+#define POWER_BTN_INDEX 0
+#define UP_BTN_INDEX    1
+#define RIGHT_BTN_INDEX 2
+#define DOWN_BTN_INDEX  3
+#define LEFT_BTN_INDEX  4
+#define PRESS_BTN_INDEX 5
 
 // Declaring UI Constants
 #define CIRCLE_COLOR        TFT_BLUE
@@ -38,11 +40,13 @@
 #define BACKGROUND_COLOR TFT_BLACK  // Define screen color
 
 // Defining buttons
-#define upButton        WIO_5S_UP
-#define downButton    WIO_5S_DOWN
-#define leftButton    WIO_5S_LEFT
-#define rightButton  WIO_5S_RIGHT
-#define okButton     WIO_5S_PRESS
+#define UP_BTN        WIO_5S_UP
+#define DOWN_BTN    WIO_5S_DOWN
+#define LEFT_BTN    WIO_5S_LEFT
+#define RIGHT_BTN  WIO_5S_RIGHT
+#define PRESS_BTN     WIO_5S_PRESS
+#define POWER_BTN  WIO_KEY_C
+#define MODE_BTN  WIO_KEY_A
 
 // Define button text, size and color
 #define buttonText     "OK"
@@ -127,6 +131,11 @@ void resetUI(){
     // Draw left arrow
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
     tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
+
+    // Draw power icon
+    tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
+    tft.drawCircle(15, 22, 6, ARROW_COLOR);
+    tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
   } else {
     tft.fillScreen(TFT_WHITE); // Fill screen with white
 	  tft.setTextColor(TFT_BLACK);
@@ -264,12 +273,12 @@ void setupBLE() {
 
 int buttonPressed(){
   int out = -1;
-  if (digitalRead(WIO_5S_PRESS) == LOW) out = PRESS_BTN;
-  else if (digitalRead(WIO_5S_UP) == LOW) out = UP_BTN;
-  else if (digitalRead(WIO_5S_DOWN) == LOW) out = DOWN_BTN;
-  else if (digitalRead(WIO_5S_LEFT) == LOW) out = LEFT_BTN;
-  else if (digitalRead(WIO_5S_RIGHT) == LOW) out = RIGHT_BTN;
-  else if (digitalRead(WIO_KEY_A) == LOW) out = POWER_BTN;
+  if (digitalRead(PRESS_BTN) == LOW) out = PRESS_BTN_INDEX;
+  else if (digitalRead(UP_BTN) == LOW) out = UP_BTN_INDEX;
+  else if (digitalRead(DOWN_BTN) == LOW) out = DOWN_BTN_INDEX;
+  else if (digitalRead(LEFT_BTN) == LOW) out = LEFT_BTN_INDEX;
+  else if (digitalRead(RIGHT_BTN) == LOW) out = RIGHT_BTN_INDEX;
+  else if (digitalRead(POWER_BTN) == LOW) out = POWER_BTN_INDEX;
   return out;
 }
 
@@ -350,11 +359,11 @@ void setup() {
   setupBLE();
   
   // Set up pins
-	pinMode(okButton, INPUT_PULLUP);
-	pinMode(upButton, INPUT_PULLUP);
-  pinMode(downButton, INPUT_PULLUP);
-  pinMode(leftButton, INPUT_PULLUP);
-  pinMode(rightButton, INPUT_PULLUP);
+	pinMode(PRESS_BTN, INPUT_PULLUP);
+	pinMode(UP_BTN, INPUT_PULLUP);
+  pinMode(DOWN_BTN, INPUT_PULLUP);
+  pinMode(LEFT_BTN, INPUT_PULLUP);
+  pinMode(RIGHT_BTN, INPUT_PULLUP);
 	pinMode(WIO_KEY_A, INPUT_PULLUP);
 	pinMode(WIO_KEY_B, INPUT_PULLUP);
 	pinMode(WIO_KEY_C, INPUT_PULLUP);
@@ -391,6 +400,7 @@ void loop() {
     client.loop(); // receive messages
 
   // MQTT publish debug
+  #ifdef DEBUG
   if (millis() - lastPinged > 5000) {
     // try publishing every 5 seconds
     if (MQTTconnected) {
@@ -402,6 +412,7 @@ void loop() {
     }
     lastPinged = millis();
   }
+  #endif
   
   // Mode button logic
   modeBtnState = digitalRead(MODE_BTN);
@@ -424,6 +435,9 @@ void loop() {
 			if (command.dataLength != 0){
         sendData(command.rawData, command.dataLength);
         digitalWrite(MoPin, HIGH); // vibrate if data sent
+
+        // DEBUG: flash a circle next to the pressed button label
+        #ifdef DEBUG
         switch(pressed) {
           case POWER_BTN:
             tft.fillCircle(0, 16, 4, TFT_GREEN);
@@ -444,14 +458,20 @@ void loop() {
             tft.fillCircle(5, 116, 4, TFT_GREEN);
             break;
         }
+        #endif
+
 				delay(250);
 				digitalWrite(MoPin, LOW);
+
+        #ifdef DEBUG
         tft.fillRect(0, 0, 10, 124, TFT_BLACK); // erase the circle
+        #endif
 			}
     }		
 	}
 
-  // print configured buttons on screen for debug
+  // DEBUG: print configured buttons on screen
+  #ifdef DEBUG
   tft.setTextSize(2);
   if (commandMap[POWER_BTN].dataLength != 0)
     tft.drawString("POWER", 20, 20);
@@ -465,4 +485,5 @@ void loop() {
     tft.drawString("DOWN", 20, 100);
   if (commandMap[PRESS_BTN].dataLength != 0)
     tft.drawString("OK", 20, 120);
+  #endif
 }
