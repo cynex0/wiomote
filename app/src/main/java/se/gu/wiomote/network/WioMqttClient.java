@@ -1,4 +1,4 @@
-package se.gu.wiomote;
+package se.gu.wiomote.network;
 
 import android.util.Log;
 

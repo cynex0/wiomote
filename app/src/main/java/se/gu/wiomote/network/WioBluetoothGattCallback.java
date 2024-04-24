@@ -28,12 +28,12 @@ public class WioBluetoothGattCallback extends BluetoothGattCallback {
     private static final String WIO_ID_SUFFIX = "WIOmote";
     private static final UUID SERVICE_UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
     private static final UUID CHARACTERISTIC_UUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+    private static final ArrayList<BluetoothDevice> devices = new ArrayList<>();
     private final Activity activity;
     private final BroadcastReceiver bluetoothDeviceFoundReceiver;
     private final BroadcastReceiver bluetoothConnectionStateReceiver;
     private final BroadcastReceiver bluetoothDiscoveryReceiver;
     private final OnConnectionChange listener;
-    private ArrayList<BluetoothDevice> devices;
     private boolean scan;
     private boolean connected;
 
@@ -41,7 +41,6 @@ public class WioBluetoothGattCallback extends BluetoothGattCallback {
                                     OnAdapterDisconnect stateChange) {
         this.activity = activity;
         this.listener = listener;
-        this.devices = new ArrayList<>();
         this.scan = false;
         this.connected = false;
 
@@ -115,7 +114,10 @@ public class WioBluetoothGattCallback extends BluetoothGattCallback {
             }
         } else {
             if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                BluetoothDevice device = gatt.getDevice();
+
                 devices.remove(gatt.getDevice());
+                devices.add(device);
             }
 
             if (listener != null && connected) {
@@ -177,7 +179,9 @@ public class WioBluetoothGattCallback extends BluetoothGattCallback {
 
             if (devices.size() > 0) {
                 devices.get(0).connectGatt(activity, false, this);
-            } else if (!adapter.isDiscovering()) {
+            }
+
+            if (!adapter.isDiscovering()) {
                 Log.d(TAG, "Starting discovery...");
 
                 adapter.startDiscovery();

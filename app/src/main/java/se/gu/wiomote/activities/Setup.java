@@ -43,7 +43,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.WioMqttClient;
 import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.network.WioBluetoothGattCallback;
 import se.gu.wiomote.views.Button;
