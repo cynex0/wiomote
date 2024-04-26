@@ -84,5 +84,5 @@ code_quality:
 sast:
   tags:
     - docker-build
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  only:
+    - merge_requests
