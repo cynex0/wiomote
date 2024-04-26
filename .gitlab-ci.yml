@@ -69,10 +69,10 @@ code_quality:
   image: docker:19.03.11
 
   tags:
-    - docker
+    - docker-build
 
   variables:
-    SOURCE_CODE: "/app/src/main/java/**" # No code quality test available for .ino files sadly
+    SOURCE_CODE: "/**"
 
   artifacts:
     reports:
@@ -84,3 +84,5 @@ code_quality:
 sast:
   tags:
     - docker-build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
