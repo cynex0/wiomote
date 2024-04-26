@@ -19,10 +19,10 @@ build_android:
     ANDROID_BUILD_TOOLS: "34.0.0"
     SECURE_FILES_DOWNLOAD_PATH: './'
   
-  before_script:
-    - cd ci
-    - chmod +x android-build-env.sh
-    - ./android-build-env.sh 
+  #before_script:
+  #  - cd ci
+  #  - chmod +x android-build-env.sh
+  #  - ./android-build-env.sh 
 
   script: 
     - export ANDROID_SDK_ROOT="${PWD}/android-home"
@@ -47,10 +47,10 @@ build_arduino:
   tags:
     - docker-build
   
-  before_script:
-    - cd ci
-    - chmod +x arduino-build-env.sh
-    - ./arduino-build-env.sh 
+  #before_script:
+  #  - cd ci
+  #  - chmod +x arduino-build-env.sh
+  #  - ./arduino-build-env.sh 
 
   script:
     - export PATH=$PATH:/root/bin
