@@ -19,7 +19,7 @@
 // Debugging modes
 #define DEBUG_UI    // additional UI elements
 #define DEBUG_LOG   // log events to serial
-#define DEBUG_PING  // send "ping"s and receive "pong"s
+#define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
 #define BTN_COUNT       6
@@ -107,6 +107,7 @@ bool bleOldDeviceConnected;
 
 // MQTT variables
 PubSubClient mqttClient(wifiClient);
+unsigned long lastPinged = 0;
 
 // Logic variables
 bool receiveMode = false;
@@ -179,6 +180,13 @@ void setupBLE() {
   bleServer -> startAdvertising();
 }
 
+void mqttPublishWithLog(const char* topic, const char* payload) {
+  mqttClient.publish(topic, payload);
+  #ifdef DEBUG_LOG
+    Serial.printf("Published message [%s]: %s\n", topic, payload);
+  #endif
+}
+
 // Received an MQTT message
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #ifdef DEBUG_LOG
@@ -193,7 +201,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     #endif
   }
   buff_p[length] = '\0';
-
+  #ifdef DEBUG_LOG
+      Serial.println();
+  #endif
 
   #ifdef DEBUG_UI
     drawRemote();
@@ -216,6 +226,12 @@ void setupMQTT() {
 void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
+    #ifdef MQTT_PING
+      if(millis() - lastPinged > 5000) {
+        mqttPublishWithLog(TOPIC_OUT, "ping");
+        lastPinged = millis();
+      }
+    #endif
   } else {
     #ifdef DEBUG_LOG
       Serial.println("Attempting MQTT connection...");
@@ -228,7 +244,7 @@ void updateMQTT() {
     if (mqttClient.connect(clientId.c_str())) {
       #ifdef DEBUG_LOG
         Serial.println("Connected to MQTT server. Publishing a test message.");
-        mqttClient.publish(TOPIC_OUT, "Publish test WIO");
+        mqttPublishWithLog(TOPIC_OUT, "Publish test WIO");
       #endif
       mqttClient.subscribe(TOPIC_IN);
     } else {
@@ -298,7 +314,8 @@ void updateNetwork() {
     wifiDeviceConnected = CONNECTED;
 
     updateMQTT();
-  } else {
+  } 
+  else {
     const char *ssid = wifiInfo["ssid"];
 
     if(wifiDeviceConnected != CONNECTING) {  
