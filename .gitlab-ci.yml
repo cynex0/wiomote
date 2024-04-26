@@ -62,7 +62,7 @@ code_quality:
   image: docker:19.03.11
 
   tags:
-    - docker
+    - docker-build
 
   variables:
     SOURCE_CODE: "/app/src/main/java/**"

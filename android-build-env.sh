@@ -19,7 +19,7 @@ mv cmdline-tools tools || true
 popd
 popd
 
-export PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/
+export "PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/" >> ~/.bashrc
 
 # Log SDKManager version
 sdkmanager --version
