@@ -20,8 +20,8 @@ build_android:
     SECURE_FILES_DOWNLOAD_PATH: './'
   
   script:
-    - chmod +x /ci/android-build-env.sh
-    - ./ci/android-build-env.sh 
+    - chmod +x ci/android-build-env.sh
+    - .ci/android-build-env.sh 
 
   #only:
   #  - main # main branch trigger
@@ -39,8 +39,8 @@ build_arduino:
     - docker-build
   
   script:
-    - chmod +x /ci/arduino-build-env.sh
-    - ./ci/arduino-build-env.sh 
+    - chmod +x ci/arduino-build-env.sh
+    - .ci/arduino-build-env.sh 
 
   #only:
   #  - main # main branch trigger
