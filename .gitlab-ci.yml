@@ -32,8 +32,8 @@ build_android:
     - chmod +x ./gradlew
     - ./gradlew assembleRelease
 
-  #only:
-  #  - main # main branch trigger
+  only:
+    - main # main branch trigger
 
   artifacts:
     paths:
@@ -58,8 +58,8 @@ build_arduino:
     - cd terminal
     - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal --output-dir ./build/output
 
-  #only:
-  #  - main # main branch trigger
+  only:
+    - main # main branch trigger
 
   artifacts:
     paths:
@@ -72,7 +72,7 @@ code_quality:
     - docker
 
   variables:
-    SOURCE_CODE: "./**" # Because we have 2 seperate source directories and code quality supports only one path
+    SOURCE_CODE: "/app/src/main/java/**" # No code quality test available for .ino files sadly
 
   artifacts:
     reports:
