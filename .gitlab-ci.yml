@@ -37,7 +37,7 @@ build_android:
 
   artifacts:
     paths:
-      - ./build/outputs/android/
+      - ./app/build/outputs/
 
 build_arduino:
   image: debian:stable
@@ -56,14 +56,14 @@ build_arduino:
   script:
     - export PATH=$PATH:${PWD}/bin
     - cd terminal
-    - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal
+    - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal --output-dir ./build/output
 
   #only:
   #  - main # main branch trigger
 
   artifacts:
     paths:
-      - ./build/outputs/arduino/
+      - ./terminal/build/output
 
 code_quality:
   image: docker:19.03.11
@@ -72,7 +72,7 @@ code_quality:
     - docker
 
   variables:
-    SOURCE_CODE: "/**" # Because we have 2 seperate source directories and code quality supports only one path
+    SOURCE_CODE: "./**" # Because we have 2 seperate source directories and code quality supports only one path
 
   artifacts:
     reports:
