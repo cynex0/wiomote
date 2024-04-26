@@ -53,7 +53,7 @@ build_arduino:
     - cd ..
 
   script:
-    - export PATH=$PATH:/root/bin
+    - export PATH=$PATH:${PWD}/bin
     - cd terminal
     - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal
 

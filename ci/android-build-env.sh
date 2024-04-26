@@ -1,5 +1,6 @@
 apt-get --quiet update --yes
 apt-get --quiet install --yes curl wget tar unzip lib32stdc++6 lib32z1 default-jre default-jdk
+cd ..
 
 # Secure files 
 curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash

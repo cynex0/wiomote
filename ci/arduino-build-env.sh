@@ -1,8 +1,9 @@
 apt-get --quiet update --yes
 apt-get --quiet install --yes curl
 apt-get --quiet install --yes git
+cd ..
 
-export PATH=$PATH:/root/bin
+export PATH=$PATH:${PWD}/bin
 
 # arduino-cli
 curl --silent -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
