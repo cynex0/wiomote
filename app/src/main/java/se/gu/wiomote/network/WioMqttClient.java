@@ -30,8 +30,16 @@ public class WioMqttClient {
         asyncClient = genericClient.toAsync();
         blockingClient = genericClient.toBlocking();
 
-        asyncClient.publishes(MqttGlobalPublishFilter.ALL, publish -> { // register a callback for received messages
-            Log.i(MQTT_LOGTAG, "Message received [" + publish.getTopic() + "]: " + new String(publish.getPayloadAsBytes()));
+        // Register a callback for received messages
+        asyncClient.publishes(MqttGlobalPublishFilter.ALL, publish -> {
+            String message = new String(publish.getPayloadAsBytes());
+            String topic = publish.getTopic().toString();
+            Log.i(MQTT_LOGTAG, "Message received [" + topic + "]: " + message);
+
+            // If a ping is received, send back a pong
+            if (topic.equals(IN_TOPIC) && message.equals("ping")) {
+                publish("pong");
+            }
         }); // registering a callback before connecting ensures no messages get lost during connection
 
         connect();
