@@ -58,7 +58,7 @@ build_arduino:
     paths:
       - ./build/outputs/arduino/
 
-code_quality_android:
+code_quality:
   image: docker:19.03.11
 
   tags:
@@ -69,23 +69,7 @@ code_quality_android:
 
   artifacts:
     reports:
-      codequality: code-quality-android.json
+      codequality: gl-code-quality-report.json
 
     paths:
-      - code-quality-android.json
-
-code_quality_arduino:
-  image: docker:19.03.11
-
-  tags:
-    - docker-build
-
-  variables:
-    SOURCE_CODE: "/terminal/**"
-
-  artifacts:
-    reports:
-      codequality: code-quality-arduino.json
-
-    paths:
-      - code-quality-arduino.json
+      - gl-code-quality-report.json
