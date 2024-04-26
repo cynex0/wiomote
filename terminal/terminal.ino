@@ -16,8 +16,10 @@
 
 #include <TFT_eSPI.h>
 
-// Debugging mode
-#define DEBUG
+// Debugging modes
+#define DEBUG_UI    // additional UI elements
+#define DEBUG_LOG   // log events to serial
+#define DEBUG_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
 #define BTN_COUNT       6
@@ -112,7 +114,7 @@ bool prevModeBtnState = HIGH;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.println("Bluetooth connected");
       #endif
 
@@ -120,7 +122,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
     }
 
     void onDisconnect(BLEServer* bleServer) {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.println("Bluetooth disconnected");
       #endif
 
@@ -133,11 +135,7 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       std::string rxValue = characteristic -> getValue();
 
       const char* data = rxValue.c_str();
-        
-      #ifdef DEBUG
-        Serial.println(data);
-      #endif
-
+  
       wifiInfo.clear();
       deserializeJson(wifiInfo, data);
 
@@ -146,7 +144,8 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
 
       wifiDeviceConnected = DISCONNECTED;
 
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
+        Serial.println(data);
         Serial.println("Cleared existing connections");
       #endif
     }
@@ -180,20 +179,23 @@ void setupBLE() {
   bleServer -> startAdvertising();
 }
 
+// Received an MQTT message
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  #ifdef DEBUG
-    Serial.printf("Message arrived [%s] ", topic);
+  #ifdef DEBUG_LOG
+    Serial.printf("Message arrived [%s]: ", topic);
+  #endif
 
-    char buff_p[length];
-    for (int i = 0; i < length; i++) {
-      Serial.print((char) payload[i]);
-      buff_p[i] = (char) payload[i];
-    }
+  char buff_p[length];
+  for (int i = 0; i < length; i++) {
+    buff_p[i] = (char) payload[i];
+    #ifdef DEBUG_LOG
+      Serial.print(buff_p[i]);
+    #endif
+  }
+  buff_p[length] = '\0';
 
-    Serial.println();
 
-    buff_p[length] = '\0';
-
+  #ifdef DEBUG_UI
     drawRemote();
 
     tft.setTextSize(TEXT_SIZE_S);
@@ -215,7 +217,7 @@ void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
   } else {
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       Serial.println("Attempting MQTT connection...");
     #endif
     
@@ -224,15 +226,13 @@ void updateMQTT() {
     String clientId = "WioTerminal-" + String(random(0xffff), HEX);
 
     if (mqttClient.connect(clientId.c_str())) {
-      #ifdef DEBUG
-        Serial.println("Connected to MQTT server");
-
+      #ifdef DEBUG_LOG
+        Serial.println("Connected to MQTT server. Publishing a test message.");
         mqttClient.publish(TOPIC_OUT, "Publish test WIO");
       #endif
-
       mqttClient.subscribe(TOPIC_IN);
     } else {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.print("Failed to connect to MQTT server - rc=" + mqttClient.state());
       #endif
     }
@@ -287,7 +287,7 @@ void updateNetwork() {
   }
 
   if(WiFi.isConnected()) {
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
         Serial.println("Connected to " + WiFi.SSID());
         Serial.print("IP address: ");
@@ -302,13 +302,13 @@ void updateNetwork() {
     const char *ssid = wifiInfo["ssid"];
 
     if(wifiDeviceConnected != CONNECTING) {  
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.printf("Connecting to %s...\n", ssid);
       #endif
 
       wifiDeviceConnected = CONNECTING;
 
-      WiFi.begin(ssid, wifiInfo["password"], 0, stringToMAC(wifiInfo["bssid"]));
+      WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
     }
   }
 }
@@ -377,7 +377,7 @@ void emitData(uint16_t *data, uint8_t dataLength){
 	if (data != nullptr){
 		emitter.send(data, dataLength, CARRIER_FREQUENCY_KHZ);
 
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       Serial.print("Signal sent: ["); Serial.print(dataLength); Serial.print("]{");
 
       for (uint8_t i = 0; i < dataLength; i++) {
@@ -503,12 +503,12 @@ void loop() {
     if (pressed != -1) {
       Command command = commandMap[pressed];
 
-			if (command.dataLength != 0){
+      if (command.dataLength != 0){
         emitData(command.rawData, command.dataLength);
 
         digitalWrite(MO_PIN, HIGH); // Vibrate if data sent
 
-        #ifdef DEBUG // Flash a circle next to the pressed button label
+        #ifdef DEBUG_UI // Flash a circle next to the pressed button label
           switch(pressed) {
             case POWER_BTN:
               tft.fillCircle(0, 16, 4, TFT_GREEN);
@@ -531,31 +531,31 @@ void loop() {
           }
         #endif
 
-				delay(250);
-				digitalWrite(MO_PIN, LOW);
+        delay(250);
+        digitalWrite(MO_PIN, LOW);
 
-        #ifdef DEBUG
+        #ifdef DEBUG_UI
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
         #endif
-			}
-    }		
-	}
+      }
+    }
+  }
 
   // DEBUG: print configured buttons on screen
-  #ifdef DEBUG
+  #ifdef DEBUG_UI
     tft.setTextSize(TEXT_SIZE_M);
 
-    if (commandMap[POWER_BTN].dataLength != 0) {
+    if (commandMap[POWER_BTN_INDEX].dataLength != 0) {
       tft.drawString("POWER", 20, 20);
-    } else if (commandMap[UP_BTN].dataLength != 0) {
+    } else if (commandMap[UP_BTN_INDEX].dataLength != 0) {
       tft.drawString("UP", 20, 40);
-    } else if (commandMap[LEFT_BTN].dataLength != 0) {
+    } else if (commandMap[LEFT_BTN_INDEX].dataLength != 0) {
       tft.drawString("LEFT", 20, 60);
-    } else if (commandMap[RIGHT_BTN].dataLength != 0) {
+    } else if (commandMap[RIGHT_BTN_INDEX].dataLength != 0) {
       tft.drawString("RIGHT", 20, 80);
-    } else if (commandMap[DOWN_BTN].dataLength != 0) {
+    } else if (commandMap[DOWN_BTN_INDEX].dataLength != 0) {
       tft.drawString("DOWN", 20, 100);
-    } else if (commandMap[PRESS_BTN].dataLength != 0) {
+    } else if (commandMap[PRESS_BTN_INDEX].dataLength != 0) {
       tft.drawString("OK", 20, 120);
     }
   #endif
