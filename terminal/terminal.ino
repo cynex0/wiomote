@@ -50,6 +50,7 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
+#define ICON_COLOR TFT_LIGHTGREY    // Define color for connection icon
 #define BACKGROUND_COLOR TFT_BLACK  // Define screen color
 
 // Buttons
@@ -348,6 +349,20 @@ int getButtonPressed(){
   }
 
   return out;
+}
+
+void drawStatusIcon(){ // Draw connection status indicator
+  
+  int coordinateX = 290;  // Local center x-coordinate
+  int coordinateY = 30;   // Local center x-coordinate
+  int endRadius = 21;     // Largest radius of the circles
+
+  //Draw circles
+  for(int radius = 3; radius <= endRadius; radius += 2){
+    
+    tft.drawCircle(coordinateX, coordinateY, radius, ICON_COLOR);
+  }
+
 }
 
 void drawRemote(){
