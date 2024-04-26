@@ -26,10 +26,8 @@ build_android:
     - cd ..
 
   script: 
-    - export ANDROID_SDK_ROOT="${PWD}/android-home"
+    - export ANDROID_SDK_ROOT="${PWD}/ci/android-home"
     - export PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/
-    - pwd
-    - ls
     - chmod +x ./gradlew
     - ./gradlew assembleRelease
 
@@ -56,8 +54,6 @@ build_arduino:
 
   script:
     - export PATH=$PATH:/root/bin
-    - pwd
-    - ls
     - cd terminal
     - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal
 
