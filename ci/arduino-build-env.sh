@@ -6,8 +6,7 @@ cd ~
 # arduino-cli
 curl --silent -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
 
-echo 'export PATH=$PATH:/root/bin' >> ~/.bashrc
-source ~/.bashrc
+export PATH=$PATH:/root/bin
 
 # Log ArduinoCLI version
 arduino-cli -version
@@ -27,3 +26,4 @@ arduino-cli lib install "Seeed Arduino rpcWiFi@1.0.7"
 cd `arduino-cli config dump | grep sketchbook | sed 's/.*\ //'`/libraries
 git clone https://oauth2:$ACCESS_TOKEN@git.chalmers.se/courses/dit113/2024/group-9/wiomote_irlib.git
 
+arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal

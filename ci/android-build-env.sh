@@ -5,8 +5,7 @@ cd ~
 # Secure files 
 curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
 
-echo export 'ANDROID_SDK_ROOT=$PWD/android-home' >> ~/.bashrc
-source ~/.bashrc
+export ANDROID_SDK_ROOT="${PWD}/android-home"
 
 install -d $ANDROID_SDK_ROOT
 # AndroidSDK
@@ -20,8 +19,7 @@ mv cmdline-tools tools || true
 popd
 popd
 
-echo export 'PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/' >> ~/.bashrc
-source ~/.bashrc
+export PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/
 
 # Log SDKManager version
 sdkmanager --version
@@ -31,3 +29,6 @@ yes | sdkmanager --licenses || true
 sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}"
 sdkmanager "platform-tools"
 sdkmanager "build-tools;${ANDROID_BUILD_TOOLS}"
+
+chmod +x ./gradlew
+./gradlew assembleRelease
