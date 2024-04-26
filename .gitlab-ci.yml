@@ -19,10 +19,16 @@ build_android:
     ANDROID_BUILD_TOOLS: "34.0.0"
     SECURE_FILES_DOWNLOAD_PATH: './'
   
-  script:
+  before_script:
     - cd ci
     - chmod +x android-build-env.sh
     - ./android-build-env.sh 
+
+  script: 
+    - export ANDROID_SDK_ROOT="${PWD}/android-home"
+    - export PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/
+    - chmod +x ./gradlew
+    - ./gradlew assembleRelease
 
   #only:
   #  - main # main branch trigger
@@ -39,10 +45,15 @@ build_arduino:
   tags:
     - docker-build
   
-  script:
+  before_script:
     - cd ci
     - chmod +x arduino-build-env.sh
     - ./arduino-build-env.sh 
+
+  script:
+    - export PATH=$PATH:/root/bin
+    - cd terminal
+    - arduino-cli compile --fqbn Seeeduino:samd:seeed_wio_terminal
 
   #only:
   #  - main # main branch trigger

@@ -29,6 +29,3 @@ yes | sdkmanager --licenses || true
 sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}"
 sdkmanager "platform-tools"
 sdkmanager "build-tools;${ANDROID_BUILD_TOOLS}"
-
-chmod +x ./gradlew
-./gradlew assembleRelease
