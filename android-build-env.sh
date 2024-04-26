@@ -5,7 +5,7 @@ cd ~
 # Secure files 
 curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/download-secure-files/-/raw/main/installer" | bash
 
-export ANDROID_SDK_ROOT="${PWD}/android-home"
+echo export 'ANDROID_SDK_ROOT=$PWD/android-home' >> ~/.bashrc
 
 install -d $ANDROID_SDK_ROOT
 # AndroidSDK
@@ -19,7 +19,7 @@ mv cmdline-tools tools || true
 popd
 popd
 
-export "PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/" >> ~/.bashrc
+echo export 'PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/' >> ~/.bashrc
 
 # Log SDKManager version
 sdkmanager --version

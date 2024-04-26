@@ -6,7 +6,7 @@ cd ~
 # arduino-cli
 curl --silent -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
 
-export "PATH=$PATH:/root/bin" >> ~/.bashrc
+echo 'export PATH=$PATH:/root/bin' >> ~/.bashrc
 
 # Log ArduinoCLI version
 arduino-cli -version
