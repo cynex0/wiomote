@@ -4,6 +4,7 @@ stages:
 
 include:
   - template: Code-Quality.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
 
 build_android:
   image: debian:stable
@@ -26,7 +27,7 @@ build_android:
     - cd ..
 
   script: 
-    - export ANDROID_SDK_ROOT="${PWD}/ci/android-home"
+    - export ANDROID_SDK_ROOT="${PWD}/android-home"
     - export PATH=$PATH:${ANDROID_SDK_ROOT}/cmdline-tools/tools/bin/
     - chmod +x ./gradlew
     - ./gradlew assembleRelease
@@ -68,10 +69,10 @@ code_quality:
   image: docker:19.03.11
 
   tags:
-    - docker-build
+    - docker
 
   variables:
-    SOURCE_CODE: "/app/src/main/java/**"
+    SOURCE_CODE: "/**" # Because we have 2 seperate source directories and code quality supports only one path
 
   artifacts:
     reports:
@@ -79,3 +80,7 @@ code_quality:
 
     paths:
       - gl-code-quality-report.json
+
+sast:
+  tags:
+    - docker-build
