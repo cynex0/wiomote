@@ -29,7 +29,8 @@ The following section lists the dependencies and requirements for the project:
 
 1. [Wio Seeed Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html)
 2. [Arduino IDE](https://www.arduino.cc/en/software)
-2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE).
+
+    2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE).
     - [Wio Terminal Board Library](https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json)
     - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
     - [Arduino Json](https://arduinojson.org/)
