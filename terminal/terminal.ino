@@ -39,6 +39,14 @@
 #define CENTER_Y                 120  // Middle point of screen Y-axis
 #define SCREEN_ROTATION            3
 
+// Constants for signal icon
+#define SIGNAL_ICON_X            290  // X placement of icon
+#define SIGNAL_ICON_Y             30  // Y placement of icon
+#define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
+#define ICON_OUTER_RADIUS         35  // Radius of the largest circle
+#define ICON_RING_SPACING          5  // Space between every ring in icon
+#define ICON_SIGNAL_COLOR TFT_ORANGE  // Color of the moving signal rings
+
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
 #define ARROW_LENGTH       40  // Value of arrow length
@@ -48,7 +56,12 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
-#define BACKGROUND_COLOR TFT_BLACK  // Define screen color
+#define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
+#define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
+
+#define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
+#define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
+
 
 // Buttons
 #define UP_BTN        WIO_5S_UP
