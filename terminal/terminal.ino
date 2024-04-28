@@ -345,22 +345,49 @@ int getButtonPressed(){
 
   return out;
 }
+void drawRecieveSignal(){  // Draw circles for incomming signal
+
+  for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(50);
+  }
+
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
+    delay(50);
+  }
+}
+
+void drawEmitSignal(){  // Draw circles for outgoing signal
+
+  for(int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(50);
+  }
+
+   for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
+        tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
+        delay(50);
+  }
+}
 
 void drawRemote(){
   if (receiveMode) {
-    tft.fillScreen(TFT_WHITE);
-	  tft.setTextColor(TFT_BLACK);
+    tft.fillScreen(INVERTED_BG_COLOR);
+	  tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
 	  tft.drawString("Recording IR", CENTER_X, CENTER_Y);
   } else {
     // Screen background
-    tft.fillScreen(BACKGROUND_COLOR);
+    tft.fillScreen(DEFAULT_BG_COLOR);
 
     // Middle button 
     tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);
     tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);
     tft.setTextSize(TEXT_SIZE_L);
-    tft.setTextColor(TFT_WHITE);
+    tft.setTextColor(DEFAULT_TEXT_COLOR);
     tft.drawString("OK", CENTER_X, CENTER_Y);
 
     // Draw top arrow
