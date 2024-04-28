@@ -45,7 +45,7 @@
 #define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
 #define ICON_OUTER_RADIUS         35  // Radius of the largest circle
 #define ICON_RING_SPACING          5  // Space between every ring in icon
-#define ICON_SIGNAL_COLOR TFT_ORANGE  // Color of the moving signal rings
+#define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
 
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
