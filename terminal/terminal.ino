@@ -416,6 +416,7 @@ void drawRemote(){
 void emitData(uint16_t *data, uint8_t dataLength){
 	if (data != nullptr){
 		emitter.send(data, dataLength, CARRIER_FREQUENCY_KHZ);
+    drawEmitSignal();
 
     #ifdef DEBUG
       Serial.print("Signal sent: ["); Serial.print(dataLength); Serial.print("]{");
@@ -461,6 +462,7 @@ void receive(){
 	if (receiver.getResults()){
 		uint8_t dataLength = recvGlobal.recvLength;
 		uint16_t *rawData = new uint16_t[dataLength];
+    drawRecieveSignal();
 
 		for (uint8_t i = 1; i < dataLength; i++) {
 			rawData[i - 1] = recvGlobal.recvBuffer[i];
