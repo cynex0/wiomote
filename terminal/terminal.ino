@@ -119,6 +119,7 @@ unsigned long lastPinged = 0;
 // Logic variables
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
+bool wifiConnectedPrevVal = true;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -320,6 +321,9 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
+	decideWiFiConnectionIcon();
+    wifiConnectedPrevVal = true;
+
     updateMQTT();
   } 
   else {
@@ -331,6 +335,9 @@ void updateNetwork() {
       #endif
 
       wifiDeviceConnected = CONNECTING;
+
+	  decideWiFiConnectionIcon();
+      wifiConnectedPrevVal = false;
 
       WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
     }
@@ -396,24 +403,45 @@ void drawRemote(){
     tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
 
     // Draw wifi connection status icon
-    drawWiFiConnectionIcon(TFT_RED);
+    drawWiFiConnectionIcon();
     
   }
 }
 
-void drawWiFiConnectionIcon(uint32_t color){
-
-    // empty the region for new icon
-    tft.drawRect(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, BACKGROUND_COLOR);
-
-    // draw 3 circles
-    for(int i = 0; i < 3; i++){
-      tft.drawCircle(WIFI_CONNECTION_CIRCLE_X, WIFI_CONNECTION_CIRCLE_Y, WIFI_CONNECTION_CIRCLE_MAX_RAD - WIFI_CONNECTION_CIRCLE_RADIUS_DIFF * i, color);
+void decideWiFiConnectionIcon(){
+	// decide the color according to connection status and previous status so it doesn't loop
+  if(wifiDeviceConnected == CONNECTED){
+    if(wifiConnectedPrevVal == true){
+      return;
     }
+    drawWiFiConnectionIcon();
+  }else{
+    if(wifiConnectedPrevVal == false){
+      return;
+    }
+    drawWiFiConnectionIcon();
+  }
+}
 
-    // use 2 triangles to mask the 3 circles into 3 arcs
-    tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
-    tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
+void drawWiFiConnectionIcon(){
+  // decide the color according to connection status
+  uint32_t color;
+  if(wifiDeviceConnected == CONNECTED){
+    color = TFT_GREEN;
+  }else{
+    color = TFT_RED;
+  }
+  // empty the region for new icon
+  tft.drawRect(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, BACKGROUND_COLOR);
+
+  // draw 3 circles
+  for(int i = 0; i < 3; i++){
+    tft.drawCircle(WIFI_CONNECTION_CIRCLE_X, WIFI_CONNECTION_CIRCLE_Y, WIFI_CONNECTION_CIRCLE_MAX_RAD - WIFI_CONNECTION_CIRCLE_RADIUS_DIFF * i, color);
+  }
+
+  // use 2 triangles to mask the 3 circles into 3 arcs
+  tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
+  tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
 }
 
 void emitData(uint16_t *data, uint8_t dataLength){
