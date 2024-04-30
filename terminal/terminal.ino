@@ -313,7 +313,7 @@ void updateNetwork() {
   }
 }
 
-int getButtonPressed(){
+int getButtonPressedIndex(){
   int out = -1;
 
   if (digitalRead(PRESS_BTN) == LOW) {
@@ -333,12 +333,53 @@ int getButtonPressed(){
   return out;
 }
 
+const char* getButtonName(const int index) {
+  char* out;
+  switch(index) {
+      case POWER_BTN_INDEX:
+        out = "POWER"; 
+        break;
+      case UP_BTN_INDEX:
+        out = "UP";
+        break;
+      case RIGHT_BTN_INDEX:
+        out = "RIGHT";
+        break;
+      case DOWN_BTN_INDEX:
+        out = "DOWN";
+        break;
+      case LEFT_BTN_INDEX:
+        out = "LEFT";
+        break;
+      case PRESS_BTN_INDEX:
+        out = "OK";
+        break;
+    }
+  return out;
+}
+
+char* serializeCommand(const Command &cmd, const int button) {
+  JsonDocument doc;
+  char* out = new char[128]; // Buffer to hold the output
+  size_t capacity;
+  doc["dataLength"] = cmd.dataLength;
+
+  JsonArray data = doc["data"].to<JsonArray>();
+  for(int i = 0; i < cmd.dataLength; i++) {
+    data.add(cmd.rawData[i]);
+  }
+
+  doc["button"] = getButtonName(button);
+  serializeJson(doc, out, 128);
+  return out;
+}
+
 void drawRemote(){
   if (receiveMode) {
     tft.fillScreen(TFT_WHITE);
 	  tft.setTextColor(TFT_BLACK);
     tft.setTextSize(TEXT_SIZE_M);
-	  tft.drawString("Recording IR", CENTER_X, CENTER_Y);
+	  tft.drawString("Select a button", CENTER_X, CENTER_Y);
   } else {
     // Screen background
     tft.fillScreen(BACKGROUND_COLOR);
@@ -395,6 +436,7 @@ void emitData(uint16_t *data, uint8_t dataLength){
 
 void switchMode(){
   receiveMode = !receiveMode;
+  receiveMode ? receiver.enableIRIn() : receiver.disableIRIn();
 
 	drawRemote();
 }
@@ -409,44 +451,49 @@ bool canMapButtons() {
 	return false;
 }
 
+int chosenButton = -1;
 void receive(){
 	if (!canMapButtons()) {
 		switchMode();
-
 		return;
 	}
 
-	receiver.enableIRIn();
-
-	if (receiver.getResults()){
-		uint8_t dataLength = recvGlobal.recvLength;
-		uint16_t *rawData = new uint16_t[dataLength];
-
-		for (uint8_t i = 1; i < dataLength; i++) {
-			rawData[i - 1] = recvGlobal.recvBuffer[i];
-		}
-
-		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
-    Command recCommand = {rawData, dataLength};
-    
-    // Save the signal to a button
+  int pressedButton = getButtonPressedIndex();
+  if (pressedButton != -1 && pressedButton != chosenButton) {
+    chosenButton = pressedButton;
+    tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
+    tft.setTextSize(TEXT_SIZE_M);
+    char message[16];
+    sprintf(message, "%s selected!", getButtonName(chosenButton));
+    tft.drawString(message, CENTER_X, CENTER_Y);
     tft.setTextSize(TEXT_SIZE_S);
-    tft.drawString("Received. Press a button to save.", CENTER_X, CENTER_Y + 20);
+    tft.drawString("Waiting for IR.", CENTER_X, CENTER_Y + 20);
+  }
+  
+  // wait until a button is pressed
+  if (chosenButton != -1) {
+    receiver.enableIRIn();
+	  if (receiver.getResults()){
+		  uint8_t dataLength = recvGlobal.recvLength;
+		  uint16_t *rawData = new uint16_t[dataLength];
 
-    int chosenButton;
-    
-    do {
-      chosenButton = getButtonPressed();
-
-      if (digitalRead(MODE_BTN) == LOW){
-			  switchMode();
-		  } else {
-        commandMap[chosenButton] = recCommand; // Write the received command to the map
+      for (uint8_t i = 1; i < dataLength; i++) {
+        rawData[i - 1] = recvGlobal.recvBuffer[i];
       }
-    } while(chosenButton == -1); // Wait for a button press
 
-    drawRemote();
-	}
+      rawData[dataLength - 1] = 1000; // Arbitrary trailing space
+      
+      Command recCommand = {rawData, dataLength};
+      commandMap[chosenButton] = recCommand; // Write the received command to the map
+      
+      mqttClient.publish("wiomote/command/cloning", serializeCommand(recCommand, chosenButton));
+
+      tft.drawString("Recorded!", CENTER_X, CENTER_Y + 40);
+      delay(50);
+      drawRemote(); // Reset the UI
+      chosenButton = -1;
+    }
+  } 
 }
 
 void setup() {
@@ -498,7 +545,7 @@ void loop() {
 	if (receiveMode){
 		receive();
 	} else { // Detecting button presses
-    int pressed = getButtonPressed();
+    int pressed = getButtonPressedIndex();
 
     if (pressed != -1) {
       Command command = commandMap[pressed];
