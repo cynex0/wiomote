@@ -181,24 +181,31 @@ void setupBLE() {
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  char buff_p[length];
+  for (int i = 0; i < length; i++) {
+    buff_p[i] = (char) payload[i];
+  }
+  buff_p[length] = '\0';
+
+
   #ifdef DEBUG
     Serial.printf("Message arrived [%s] ", topic);
 
-    char buff_p[length];
     for (int i = 0; i < length; i++) {
       Serial.print((char) payload[i]);
-      buff_p[i] = (char) payload[i];
     }
-
     Serial.println();
 
-    buff_p[length] = '\0';
-
     drawRemote();
-
     tft.setTextSize(TEXT_SIZE_S);
     tft.drawString("MQTT: " + String(buff_p), 0, TFT_WIDTH - 2); // width is height :)
   #endif
+
+  // A command sent from the app
+  if (topic == "wiomote/command/app") {
+    Command command = deserializeCommand(buff_p);
+    emitData(command.rawData, command.dataLength);
+  }
 }
 
 void setupMQTT() {
@@ -331,6 +338,20 @@ int getButtonPressed(){
   }
 
   return out;
+}
+
+Command deserializeCommand(char *jsonString) {
+  JsonDocument doc;
+  deserializeJson(doc, jsonString);
+  
+  uint8_t dataLength = doc["dataLength"];
+  JsonArray rawDataJson = doc["data"];
+  uint16_t *rawData = new uint16_t[dataLength];
+  for (uint8_t i = 0; i < dataLength; i++) {
+    rawData[i] = rawDataJson[i];
+  }
+
+  return {rawData, dataLength};
 }
 
 void drawRemote(){
