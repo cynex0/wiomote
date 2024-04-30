@@ -80,6 +80,12 @@
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
+// Wifi connection icon
+#define WIFI_CONNECTION_CIRCLE_X 290
+#define WIFI_CONNECTION_CIRCLE_Y 30
+#define WIFI_CONNECTION_CIRCLE_MAX_RAD 18
+#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF 6
+
 struct Command {
   uint16_t *rawData;
   uint8_t dataLength;
@@ -351,20 +357,6 @@ int getButtonPressed(){
   return out;
 }
 
-void drawStatusIcon(){ // Draw connection status indicator
-  
-  int coordinateX = 290;  // Local center x-coordinate
-  int coordinateY = 30;   // Local center x-coordinate
-  int endRadius = 21;     // Largest radius of the circles
-
-  //Draw circles
-  for(int radius = 3; radius <= endRadius; radius += 2){
-    
-    tft.drawCircle(coordinateX, coordinateY, radius, ICON_COLOR);
-  }
-
-}
-
 void drawRemote(){
   if (receiveMode) {
     tft.fillScreen(TFT_WHITE);
@@ -402,7 +394,26 @@ void drawRemote(){
     tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
     tft.drawCircle(15, 22, 6, ARROW_COLOR);
     tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
+
+    // Draw wifi connection status icon
+    drawWiFiConnectionIcon(TFT_RED);
+    
   }
+}
+
+void drawWiFiConnectionIcon(uint32_t color){
+
+    // empty the region for new icon
+    tft.drawRect(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, BACKGROUND_COLOR);
+
+    // draw 3 circles
+    for(int i = 0; i < 3; i++){
+      tft.drawCircle(WIFI_CONNECTION_CIRCLE_X, WIFI_CONNECTION_CIRCLE_Y, WIFI_CONNECTION_CIRCLE_MAX_RAD - WIFI_CONNECTION_CIRCLE_RADIUS_DIFF * i, color);
+    }
+
+    // use 2 triangles to mask the 3 circles into 3 arcs
+    tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
+    tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
 }
 
 void emitData(uint16_t *data, uint8_t dataLength){
