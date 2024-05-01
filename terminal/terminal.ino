@@ -124,8 +124,9 @@ bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 
 //Buzzer variables
-const unsigned long buzzerDuration = 250;
+const unsigned long buzzerDuration = 300;
 unsigned long buzzerStart;
+bool isVibrating = false;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -350,19 +351,25 @@ int getButtonPressed(){
   return out;
 }
 
-void vibrate(){
+void vibrate() {
 
-  digitalWrite(MO_PIN, HIGH);  // Start the vibration
-
-  if(millis() - buzzerStart >= buzzerDuration){ // Turn of vibration after duration passed
-
-    digitalWrite(MO_PIN, LOW);
+  if(!(isVibrating)) {  // Ensures a vibration isnt already triggered
+    
+    digitalWrite(MO_PIN, HIGH);  // Start vibration if its not already vibrating
+    isVibrating = true;          
+    buzzerStart = millis();      // Log the starting time of vibration
+  }
+  
+  if(isVibrating && (millis() - buzzerStart >= buzzerDuration )) { // Ensures last triggered vibration ends after duration
+    
+    digitalWrite(MO_PIN, LOW); 
+    isVibrating = false; // Clear active vibration status
   }
 }
 
-void drawRecieveSignal(){  // Draw circles for incomming signal
+void drawRecieveSignal() {  // Draw circles for incomming signal
 
-  for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
     
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
     delay(30);
@@ -374,17 +381,17 @@ void drawRecieveSignal(){  // Draw circles for incomming signal
   }
 }
 
-void drawEmitSignal(){  // Draw circles for outgoing signal
+void drawEmitSignal() {  // Draw circles for outgoing signal
 
-  for(int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
+  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
     
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
     delay(30);
   }
 
-   for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
-        tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
-        delay(30);
+  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
+    delay(30);
   }
 }
 
