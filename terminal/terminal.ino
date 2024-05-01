@@ -350,12 +350,12 @@ void drawRecieveSignal(){  // Draw circles for incomming signal
   for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
     
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
-    delay(50);
+    delay(30);
   }
 
   for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
-    delay(50);
+    delay(30);
   }
 }
 
@@ -364,12 +364,12 @@ void drawEmitSignal(){  // Draw circles for outgoing signal
   for(int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
     
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
-    delay(50);
+    delay(30);
   }
 
    for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
         tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
-        delay(50);
+        delay(30);
   }
 }
 
