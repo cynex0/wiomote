@@ -462,14 +462,14 @@ void receive(){
 	if (receiver.getResults()){
 		uint8_t dataLength = recvGlobal.recvLength;
 		uint16_t *rawData = new uint16_t[dataLength];
-    drawRecieveSignal();
-
+    
 		for (uint8_t i = 1; i < dataLength; i++) {
 			rawData[i - 1] = recvGlobal.recvBuffer[i];
 		}
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     Command recCommand = {rawData, dataLength};
+    drawRecieveSignal();
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
