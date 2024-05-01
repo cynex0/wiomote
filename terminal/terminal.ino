@@ -123,6 +123,10 @@ PubSubClient mqttClient(wifiClient);
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 
+//Buzzer variables
+const unsigned long buzzerDuration = 250;
+unsigned long buzzerStart;
+
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
       #ifdef DEBUG
@@ -345,6 +349,17 @@ int getButtonPressed(){
 
   return out;
 }
+
+void vibrate(){
+
+  digitalWrite(MO_PIN, HIGH);  // Start the vibration
+
+  if(millis() - buzzerStart >= buzzerDuration){ // Turn of vibration after duration passed
+
+    digitalWrite(MO_PIN, LOW);
+  }
+}
+
 void drawRecieveSignal(){  // Draw circles for incomming signal
 
   for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
@@ -543,6 +558,8 @@ void loop() {
     int pressed = getButtonPressed();
 
     if (pressed != -1) {
+
+      vibrate(); // Vibrate when a button is pressed
       Command command = commandMap[pressed];
 
 			if (command.dataLength != 0){
