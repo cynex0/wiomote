@@ -39,6 +39,14 @@
 #define CENTER_Y                 120  // Middle point of screen Y-axis
 #define SCREEN_ROTATION            3
 
+// Constants for signal icon
+#define SIGNAL_ICON_X            290  // X placement of icon
+#define SIGNAL_ICON_Y             30  // Y placement of icon
+#define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
+#define ICON_OUTER_RADIUS         35  // Radius of the largest circle
+#define ICON_RING_SPACING          5  // Space between every ring in icon
+#define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
+
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
 #define ARROW_LENGTH       40  // Value of arrow length
@@ -48,7 +56,12 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
-#define BACKGROUND_COLOR TFT_BLACK  // Define screen color
+#define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
+#define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
+
+#define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
+#define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
+
 
 // Buttons
 #define UP_BTN        WIO_5S_UP
@@ -332,22 +345,49 @@ int getButtonPressed(){
 
   return out;
 }
+void drawRecieveSignal(){  // Draw circles for incomming signal
+
+  for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(30);
+  }
+
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
+    delay(30);
+  }
+}
+
+void drawEmitSignal(){  // Draw circles for outgoing signal
+
+  for(int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(30);
+  }
+
+   for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
+        tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
+        delay(30);
+  }
+}
 
 void drawRemote(){
   if (receiveMode) {
-    tft.fillScreen(TFT_WHITE);
-	  tft.setTextColor(TFT_BLACK);
+    tft.fillScreen(INVERTED_BG_COLOR);
+	  tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
 	  tft.drawString("Recording IR", CENTER_X, CENTER_Y);
   } else {
     // Screen background
-    tft.fillScreen(BACKGROUND_COLOR);
+    tft.fillScreen(DEFAULT_BG_COLOR);
 
     // Middle button 
     tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);
     tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);
     tft.setTextSize(TEXT_SIZE_L);
-    tft.setTextColor(TFT_WHITE);
+    tft.setTextColor(DEFAULT_TEXT_COLOR);
     tft.drawString("OK", CENTER_X, CENTER_Y);
 
     // Draw top arrow
@@ -376,6 +416,7 @@ void drawRemote(){
 void emitData(uint16_t *data, uint8_t dataLength){
 	if (data != nullptr){
 		emitter.send(data, dataLength, CARRIER_FREQUENCY_KHZ);
+    drawEmitSignal();
 
     #ifdef DEBUG
       Serial.print("Signal sent: ["); Serial.print(dataLength); Serial.print("]{");
@@ -421,13 +462,14 @@ void receive(){
 	if (receiver.getResults()){
 		uint8_t dataLength = recvGlobal.recvLength;
 		uint16_t *rawData = new uint16_t[dataLength];
-
+    
 		for (uint8_t i = 1; i < dataLength; i++) {
 			rawData[i - 1] = recvGlobal.recvBuffer[i];
 		}
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     Command recCommand = {rawData, dataLength};
+    drawRecieveSignal();
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
