@@ -6,6 +6,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
 import se.gu.wiomote.R;
+import se.gu.wiomote.activities.remote.Remote;
 
 public class Main extends AppCompatActivity {
     @Override
@@ -20,8 +21,8 @@ public class Main extends AppCompatActivity {
             startActivity(intent);
         });
 
-        findViewById(R.id.mqtt).setOnClickListener(v -> {
-            startActivity(new Intent(Main.this, Mqtt.class));
+        findViewById(R.id.remote).setOnClickListener(v -> {
+            startActivity(new Intent(Main.this, Remote.class));
         });
     }
 }
