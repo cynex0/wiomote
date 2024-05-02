@@ -82,9 +82,11 @@
 
 // Wifi connection icon
 #define WIFI_CONNECTION_CIRCLE_X 290
-#define WIFI_CONNECTION_CIRCLE_Y 30
-#define WIFI_CONNECTION_CIRCLE_MAX_RAD 18
-#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF 6
+#define WIFI_CONNECTION_CIRCLE_Y 35
+#define WIFI_CONNECTION_CIRCLE_MAX_RAD 21
+#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF 7
+#define WIFI_CONNECTION_ICON_COLOR_ON TFT_NAVY
+#define WIFI_CONNECTION_ICON_COLOR_OFF TFT_DARKGREY
 
 struct Command {
   uint16_t *rawData;
@@ -427,9 +429,9 @@ void drawWiFiConnectionIcon(){
   // decide the color according to connection status
   uint32_t color;
   if(wifiDeviceConnected == CONNECTED){
-    color = TFT_GREEN;
+    color = WIFI_CONNECTION_ICON_COLOR_ON;
   }else{
-    color = TFT_RED;
+    color = WIFI_CONNECTION_ICON_COLOR_OFF;
   }
   // empty the region for new icon
   tft.drawRect(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, BACKGROUND_COLOR);
