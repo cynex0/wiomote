@@ -130,6 +130,9 @@ unsigned long lastPinged = 0;
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
+bool bltConnectedPrevVal = false;
+
+void decideBltConnectionIcon();
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -138,6 +141,8 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
       #endif
 
       bleDeviceConnected = true;
+      decideBltConnectionIcon();
+      bltConnectedPrevVal = true;
     }
 
     void onDisconnect(BLEServer* bleServer) {
@@ -146,6 +151,8 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
       #endif
 
       bleDeviceConnected = false;
+      decideBltConnectionIcon();
+      bltConnectedPrevVal = false;
     }
 };
 
@@ -456,6 +463,22 @@ void drawWiFiConnectionIcon(){
   tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
   tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, BACKGROUND_COLOR);
 }
+
+void decideBltConnectionIcon(){
+	// decide the color according to connection status and previous status so it doesn't loop
+  if(bleDeviceConnected){
+    if(bltConnectedPrevVal == true){
+      return;
+    }
+    drawBltConnectionIcon();
+  }else{
+    if(bltConnectedPrevVal == false){
+      return;
+    }
+    drawBltConnectionIcon();
+  }
+}
+
 
 void drawBltConnectionIcon(){
   uint32_t color;
