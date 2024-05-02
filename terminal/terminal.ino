@@ -430,6 +430,7 @@ void drawRemote(){
 
 void decideWiFiConnectionIcon(){
 	// decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode) return;
   if(wifiDeviceConnected == CONNECTED){
     if(wifiConnectedPrevVal == true){
       return;
@@ -466,6 +467,7 @@ void drawWiFiConnectionIcon(){
 
 void decideBltConnectionIcon(){
 	// decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode) return;
   if(bleDeviceConnected){
     if(bltConnectedPrevVal == true){
       return;
