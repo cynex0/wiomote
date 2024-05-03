@@ -31,6 +31,9 @@
 // Motor pin
 #define MO_PIN D0
 
+// Buzzer pin
+#define BUZZER_PIN WIO_BUZZER 
+
 // UI elements
 #define CIRCLE_COLOR        TFT_BLUE
 #define OUTER_CIRCLE_COLOR TFT_WHITE
@@ -123,10 +126,15 @@ PubSubClient mqttClient(wifiClient);
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 
-//Buzzer variables
-const unsigned long buzzerDuration = 300;
-unsigned long buzzerStart;
+// Motor variables
+const int vibDuration = 200;
+unsigned long lastVibrated = 0;
 bool isVibrating = false;
+
+// Buzzer variables
+const int buzzDuration = 400;
+unsigned long lastBuzzed = 0;
+bool isBuzzing = false;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -351,31 +359,54 @@ int getButtonPressed(){
   return out;
 }
 
-void vibrate() {
+void startBuzzer() {
 
-  if(!(isVibrating)) {  // Ensures a vibration isnt already triggered
+  if (!(isBuzzing)) {  // Checks that buzzer isnt active already
     
-    digitalWrite(MO_PIN, HIGH);  // Start vibration if its not already vibrating
-    isVibrating = true;          
-    buzzerStart = millis();      // Log the starting time of vibration
-  }
-  
-  if(isVibrating && (millis() - buzzerStart >= buzzerDuration )) { // Ensures last triggered vibration ends after duration
-    
-    digitalWrite(MO_PIN, LOW); 
-    isVibrating = false; // Clear active vibration status
+    digitalWrite(BUZZER_PIN, HIGH); // Start buzzer
+    lastBuzzed = millis();          // Log the time of activation
+    isBuzzing = true;               // Flag that buzzer is active
   }
 }
 
-void drawRecieveSignal() {  // Draw circles for incomming signal
+void updateBuzzer () { // Turns off buzzer after set duration
+  
+  if (isBuzzing && (millis() - lastBuzzed >= buzzDuration)) { // Check if duration has passed
+
+    digitalWrite(BUZZER_PIN, LOW);
+    isBuzzing = false;
+  }
+}
+
+void startVibration() {
+
+  if (!(isVibrating)) {  // Ensures a vibration isnt already triggered
+    
+    digitalWrite(MO_PIN, HIGH); // Start vibration
+    lastVibrated = millis();    // Log the time of activation
+    isVibrating = true;         // Flag for active vibration
+  }
+}
+
+void updateVibration() { // Turns off vibration after set duration
+  
+  if (isVibrating && (millis() - lastVibrated >= vibDuration)) { // Check if duration has passed
+
+    digitalWrite(MO_PIN, LOW);
+    isVibrating = false;
+  }
+}
+
+void drawReceiveSignal() {  // Draw circles for incomming signal
 
   for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
-    
+
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
     delay(30);
   }
 
   for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
+    
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
     delay(30);
   }
@@ -458,7 +489,8 @@ void emitData(uint16_t *data, uint8_t dataLength){
 
 void switchMode(){
   receiveMode = !receiveMode;
-
+  
+  startBuzzer();
 	drawRemote();
 }
 
@@ -491,7 +523,7 @@ void receive(){
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     Command recCommand = {rawData, dataLength};
-    drawRecieveSignal();
+    drawReceiveSignal();
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
@@ -531,6 +563,8 @@ void setup() {
 	pinMode(WIO_KEY_C, INPUT_PULLUP);
 
 	pinMode(MO_PIN, OUTPUT); 
+  
+  pinMode(BUZZER_PIN, OUTPUT);
 
   // Initialize commands "map"
   for(uint8_t i = 0; i < BTN_COUNT; i++){
@@ -548,7 +582,9 @@ void setup() {
 
 void loop() {
   updateNetwork();
-  
+  updateVibration();
+  updateBuzzer();
+
   // Mode button logic
   bool modeBtnState = digitalRead(MODE_BTN);
   if (modeBtnState != prevModeBtnState) {
@@ -566,9 +602,9 @@ void loop() {
 
     if (pressed != -1) {
 
-      vibrate(); // Vibrate when a button is pressed
-      Command command = commandMap[pressed];
-
+    Command command = commandMap[pressed];
+    startVibration(); // Vibrate after button press
+    
 			if (command.dataLength != 0){
         emitData(command.rawData, command.dataLength);
 
@@ -596,8 +632,8 @@ void loop() {
               break;
           }
         #endif
-
-				delay(250);
+        
+        delay(250);
 				digitalWrite(MO_PIN, LOW);
 
         #ifdef DEBUG
