@@ -363,7 +363,7 @@ void startBuzzer() {
 
   if (!(isBuzzing)) {  // Checks that buzzer isnt active already
     
-    digitalWrite(BUZZER_PIN, HIGH); // Start buzzer
+    analogWrite(BUZZER_PIN, 128); // Start buzzer
     lastBuzzed = millis();          // Log the time of activation
     isBuzzing = true;               // Flag that buzzer is active
   }
@@ -373,7 +373,7 @@ void updateBuzzer () { // Turns off buzzer after set duration
   
   if (isBuzzing && (millis() - lastBuzzed >= buzzDuration)) { // Check if duration has passed
 
-    digitalWrite(BUZZER_PIN, LOW);
+    analogWrite(BUZZER_PIN, 0);
     isBuzzing = false;
   }
 }
@@ -603,12 +603,11 @@ void loop() {
     if (pressed != -1) {
 
     Command command = commandMap[pressed];
-    startVibration(); // Vibrate after button press
     
 			if (command.dataLength != 0){
         emitData(command.rawData, command.dataLength);
 
-        digitalWrite(MO_PIN, HIGH); // Vibrate if data sent
+        startVibration(); // Vibrate after data sent
 
         #ifdef DEBUG // Flash a circle next to the pressed button label
           switch(pressed) {
@@ -633,8 +632,6 @@ void loop() {
           }
         #endif
         
-        delay(250);
-				digitalWrite(MO_PIN, LOW);
 
         #ifdef DEBUG
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
