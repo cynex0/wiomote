@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import javax.security.auth.login.LoginException;
+
 public class Configuration {
     private static final String TAG = "Configuration";
     private static final String UUID_KEY = "uuid";
@@ -53,25 +55,44 @@ public class Configuration {
         commands.put(keyCode, command);
     }
 
+
+    /* JSON Format (prettified):
+    {
+      "uuid" : "...",
+      "name" : "...",
+      "commands" : [
+        {
+          "keyCode" : <number>,
+          "command" :
+            {
+              "label" : "...",
+              "dataLength" : <length>,
+              "rawData" : [ <byte0>, ...]
+            }
+        }
+      ]
+    }
+     */
     public String serializeJSON() {
         StringBuilder builder = new StringBuilder();
 
         builder.append("{")
-                .append("\"" + UUID_KEY + "\":\"").append(uuid).append("\",")
-                .append("\"" + NAME_KEY + "\":\"").append(uuid).append("\",")
-                .append("\"" + COMMANDS_KEY + "\":")
-                .append("[");
+                .append("\"" + UUID_KEY + "\":\"").append(uuid).append("\",") // "uuid":"<uuid>",
+                .append("\"" + NAME_KEY + "\":\"").append(uuid).append("\",") // "name":"<name>",
+                .append("\"" + COMMANDS_KEY + "\":["); // "commands":[
 
         commands.forEach((keyCode, command) -> {
             builder.append("{")
-                    .append("\"" + KEYCODE_KEY + "\":\"").append(keyCode).append("\",")
-                    .append("\"" + COMMAND_KEY + "\":")
-                    .append(command.serializeJSON())
-                    .append("},");
+                    .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<number>,
+                    .append("\"" + COMMAND_KEY + "\":") // "command":
+                    .append(command.serializeJSON()) // (see Command.java)
+                    .append(",");
         });
 
+        if (!commands.isEmpty()) builder.deleteCharAt(builder.length() - 1); // Delete trailing comma if at least 1 command is present
         builder.append("]}");
 
+        Log.i(TAG, "serializeJSON: " + builder);
         return builder.toString();
     }
 

@@ -69,10 +69,12 @@
 #define DISCONNECTED 2
 
 // MQTT
-#define MQTT_SERVER         "broker.hivemq.com"
-#define MQTT_PORT                         1883
-#define TOPIC_OUT "wiomote/connection/terminal"
-#define TOPIC_IN       "wiomote/connection/app"
+#define MQTT_SERVER "broker.hivemq.com"
+#define MQTT_PORT                 1883
+
+#define TOPIC_CONN_OUT "wiomote/connection/terminal"
+#define TOPIC_CONN_IN       "wiomote/connection/app"
+#define TOPIC_APP_COMMAND           "wiomote/ir/app"
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
@@ -141,7 +143,7 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       wifiInfo.clear();
       deserializeJson(wifiInfo, data);
 
-      mqttClient.unsubscribe(TOPIC_IN);
+      mqttClient.unsubscribe(TOPIC_CONN_IN);
       WiFi.disconnect();
 
       wifiDeviceConnected = DISCONNECTED;
@@ -202,7 +204,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #endif
 
   // A command sent from the app
-  if (topic == "wiomote/command/app") {
+  if (strcmp(topic, TOPIC_APP_COMMAND) == 0) {
     Command command = deserializeCommand(buff_p);
     emitData(command.rawData, command.dataLength);
   }
@@ -234,10 +236,11 @@ void updateMQTT() {
       #ifdef DEBUG
         Serial.println("Connected to MQTT server");
 
-        mqttClient.publish(TOPIC_OUT, "Publish test WIO");
+        mqttClient.publish(TOPIC_CONN_OUT, "Publish test WIO");
       #endif
 
-      mqttClient.subscribe(TOPIC_IN);
+      mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
+      mqttClient.subscribe(TOPIC_APP_COMMAND); // topic to receive IR commands from the app
     } else {
       #ifdef DEBUG
         Serial.print("Failed to connect to MQTT server - rc=" + mqttClient.state());
@@ -340,12 +343,18 @@ int getButtonPressed(){
   return out;
 }
 
-Command deserializeCommand(char *jsonString) {
+/* Expected format (may also contain more keys):
+  {
+    "dataLength":<length>,
+    "rawData":[<byte0>,<byte1>,...]
+  }
+*/
+Command deserializeCommand(char* jsonString) {
   JsonDocument doc;
   deserializeJson(doc, jsonString);
   
   uint8_t dataLength = doc["dataLength"];
-  JsonArray rawDataJson = doc["data"];
+  JsonArray rawDataJson = doc["rawData"];
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
     rawData[i] = rawDataJson[i];
