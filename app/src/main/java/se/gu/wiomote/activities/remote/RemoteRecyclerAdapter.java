@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import se.gu.wiomote.R;
+import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.network.WioMQTTClient;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
@@ -54,7 +55,8 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
             holder.label.setText("Button " + (position + 1));
 
             holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                    ("Test button pressed" + (position + 1)).getBytes()));
+                    new Command("Button " + (position + 1),
+                            new int[]{(position + 1) * 100}).serializeJSON().getBytes()));
         }
     }
 
