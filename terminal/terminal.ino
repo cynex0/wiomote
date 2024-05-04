@@ -41,7 +41,7 @@
 
 // Constants for signal icon
 #define SIGNAL_ICON_X            290  // X placement of icon
-#define SIGNAL_ICON_Y             30  // Y placement of icon
+#define SIGNAL_ICON_Y            210  // Y placement of icon
 #define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
 #define ICON_OUTER_RADIUS         35  // Radius of the largest circle
 #define ICON_RING_SPACING          5  // Space between every ring in icon
@@ -345,7 +345,7 @@ int getButtonPressed(){
 
   return out;
 }
-void drawRecieveSignal(){  // Draw circles for incomming signal
+void drawReceiveSignal(){  // Draw circles for incomming signal
 
   for(int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING){
     
@@ -469,7 +469,7 @@ void receive(){
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     Command recCommand = {rawData, dataLength};
-    drawRecieveSignal();
+    drawReceiveSignal();
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
