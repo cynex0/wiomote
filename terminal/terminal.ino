@@ -109,6 +109,7 @@ PubSubClient mqttClient(wifiClient);
 // Logic variables
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
+int chosenButton = -1; // Button selection in the cloning mode
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -435,9 +436,11 @@ void emitData(uint16_t *data, uint8_t dataLength){
 }
 
 void switchMode(){
+  if (receiveMode) {
+    chosenButton = -1; // Forget the chosen button when the user exits cloning mode
+    receiver.disableIRIn(); // Disable IR input when exiting cloning mode to prevent reading random signals
+  } 
   receiveMode = !receiveMode;
-  receiveMode ? receiver.enableIRIn() : receiver.disableIRIn();
-
 	drawRemote();
 }
 
@@ -451,7 +454,6 @@ bool canMapButtons() {
 	return false;
 }
 
-int chosenButton = -1;
 void receive(){
 	if (!canMapButtons()) {
 		switchMode();
@@ -472,7 +474,9 @@ void receive(){
   
   // wait until a button is pressed
   if (chosenButton != -1) {
-    receiver.enableIRIn();
+    receiver.enableIRIn(); // Enable receiving only after a button is pressed
+    // NOTE: IR input is automatically disabled after a signal is received
+
 	  if (receiver.getResults()){
 		  uint8_t dataLength = recvGlobal.recvLength;
 		  uint16_t *rawData = new uint16_t[dataLength];
@@ -489,7 +493,7 @@ void receive(){
       mqttClient.publish("wiomote/command/cloning", serializeCommand(recCommand, chosenButton));
 
       tft.drawString("Recorded!", CENTER_X, CENTER_Y + 40);
-      delay(50);
+      delay(150);
       drawRemote(); // Reset the UI
       chosenButton = -1;
     }
