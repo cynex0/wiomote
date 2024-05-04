@@ -34,6 +34,9 @@
 // Buzzer pin
 #define BUZZER_PIN WIO_BUZZER 
 
+// Buzzer constants
+#define BUZZER_FRQ 128 // Buzzer PWM frequency
+
 // UI elements
 #define CIRCLE_COLOR        TFT_BLUE
 #define OUTER_CIRCLE_COLOR TFT_WHITE
@@ -363,7 +366,7 @@ void startBuzzer() {
 
   if (!(isBuzzing)) {  // Checks that buzzer isnt active already
     
-    analogWrite(BUZZER_PIN, 128); // Start buzzer
+    analogWrite(BUZZER_PIN, BUZZER_FRQ); // Start buzzer
     lastBuzzed = millis();          // Log the time of activation
     isBuzzing = true;               // Flag that buzzer is active
   }
