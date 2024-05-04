@@ -46,10 +46,10 @@
 #define SCREEN_ROTATION            3
 
 // Constants for signal icon
-#define SIGNAL_ICON_X            290  // X placement of icon
-#define SIGNAL_ICON_Y             30  // Y placement of icon
+#define SIGNAL_ICON_X            280  // X placement of icon
+#define SIGNAL_ICON_Y            200  // Y placement of icon
 #define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
-#define ICON_OUTER_RADIUS         35  // Radius of the largest circle
+#define ICON_OUTER_RADIUS         30  // Radius of the largest circle
 #define ICON_RING_SPACING          5  // Space between every ring in icon
 #define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
 
