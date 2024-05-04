@@ -231,6 +231,8 @@ public class Setup extends AppCompatActivity {
                 startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
             }
         });
+
+        locationButton.performClick();
     }
 
     private void requestLocationService() {
