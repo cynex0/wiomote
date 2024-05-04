@@ -21,12 +21,12 @@
 
 // Button indexes for the array acting as a map
 #define BTN_COUNT       6
-#define POWER_BTN_INDEX 0
-#define UP_BTN_INDEX    1
-#define RIGHT_BTN_INDEX 2
-#define DOWN_BTN_INDEX  3
-#define LEFT_BTN_INDEX  4
-#define PRESS_BTN_INDEX 5
+#define POWER_BTN_INDEX 0 // -1 in the app
+#define UP_BTN_INDEX    1 // -2 in the app
+#define RIGHT_BTN_INDEX 2 // -3 in the app
+#define DOWN_BTN_INDEX  3 // -4 in the app
+#define LEFT_BTN_INDEX  4 // -5 in the app
+#define PRESS_BTN_INDEX 5 // -6 in the app
 
 // Motor pin
 #define MO_PIN D0
@@ -206,13 +206,17 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // A command sent from the app
   if (strcmp(topic, TOPIC_APP_COMMAND) == 0) {
     Command command = deserializeCommand(buff_p);
-    emitData(command.rawData, command.dataLength);
+
+    emitData(command);
+
+    delete[] command.rawData;
   }
 }
 
 void setupMQTT() {
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(8192);
 }
 
 // Terminal commands to check if it works via Mosquitto
@@ -291,7 +295,7 @@ void updateNetwork() {
   if (bleDeviceConnected && !bleOldDeviceConnected) {
     bleOldDeviceConnected = bleDeviceConnected;
   }
-
+  
   if(wifiInfo.isNull()) {
     return;
   }
@@ -350,16 +354,17 @@ int getButtonPressed(){
   }
 */
 Command deserializeCommand(char* jsonString) {
-  JsonDocument doc;
-  deserializeJson(doc, jsonString);
+  JsonDocument* doc = new JsonDocument;
+  deserializeJson(*doc, jsonString);
   
-  uint8_t dataLength = doc["dataLength"];
-  JsonArray rawDataJson = doc["rawData"];
+  uint8_t dataLength = (*doc)["dataLength"];
+  JsonArray rawDataJson = (*doc)["rawData"];
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
     rawData[i] = rawDataJson[i];
   }
 
+  delete doc;
   return {rawData, dataLength};
 }
 
@@ -403,17 +408,17 @@ void drawRemote(){
   }
 }
 
-void emitData(uint16_t *data, uint8_t dataLength){
-	if (data != nullptr){
-		emitter.send(data, dataLength, CARRIER_FREQUENCY_KHZ);
+void emitData(const Command& command){
+	if (command.rawData != nullptr){
+		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
 
     #ifdef DEBUG
-      Serial.print("Signal sent: ["); Serial.print(dataLength); Serial.print("]{");
+      Serial.print("Signal sent: ["); Serial.print(command.dataLength); Serial.print("]{");
 
-      for (uint8_t i = 0; i < dataLength; i++) {
-        Serial.print(data[i]);
+      for (uint8_t i = 0; i < command.dataLength; i++) {
+        Serial.print(command.rawData[i]);
 
-        if (i != dataLength - 1) {
+        if (i != command.dataLength - 1) {
           Serial.print(", ");
         }
       }
@@ -481,6 +486,7 @@ void receive(){
 
 void setup() {
   Serial.begin(9600); // Start serial
+  while(!Serial); // Wait for serial
 
   setupWiFi();
   setupMQTT();
@@ -529,12 +535,12 @@ void loop() {
 		receive();
 	} else { // Detecting button presses
     int pressed = getButtonPressed();
-
+  
     if (pressed != -1) {
       Command command = commandMap[pressed];
-
+      
 			if (command.dataLength != 0){
-        emitData(command.rawData, command.dataLength);
+        emitData(command);
 
         digitalWrite(MO_PIN, HIGH); // Vibrate if data sent
 
@@ -568,7 +574,7 @@ void loop() {
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
         #endif
 			}
-    }		
+    }	
 	}
 
   // DEBUG: print configured buttons on screen
@@ -589,4 +595,5 @@ void loop() {
       tft.drawString("OK", 20, 120);
     }
   #endif
+  delay(50); // Slow down the loop
 }
