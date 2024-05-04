@@ -92,6 +92,7 @@ public class WioMQTTClient {
                 .qos(MqttQos.AT_LEAST_ONCE)
                 .build();
 
+        Log.i(TAG, "publish[" + topic + "]: " + new String(bytes));
         return client.publish(message);
     }
 }

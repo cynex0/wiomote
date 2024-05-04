@@ -4,14 +4,13 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import javax.security.auth.login.LoginException;
 
 public class Configuration {
     private static final String TAG = "Configuration";
@@ -31,7 +30,7 @@ public class Configuration {
         this.commands = commands;
     }
 
-    private Configuration(String uuid, @NonNull String name, @NonNull JSONObject commands) {
+    private Configuration(String uuid, @NonNull String name, @NonNull JSONArray commands) {
         this(uuid, name, toCommandMap(commands));
     }
 
@@ -96,13 +95,13 @@ public class Configuration {
         return builder.toString();
     }
 
-    public Configuration deserializeJSON(String jsonString) {
+    public static Configuration deserializeJSON(String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
 
             return new Configuration(jsonObject.getString(UUID_KEY),
                     jsonObject.getString(NAME_KEY),
-                    jsonObject.getJSONObject(COMMANDS_KEY));
+                    jsonObject.getJSONArray(COMMANDS_KEY));
         } catch (JSONException exception) {
             Log.e(TAG, "deserialize: Malformed configuration.");
 
@@ -110,16 +109,12 @@ public class Configuration {
         }
     }
 
-    private static Map<Integer, Command> toCommandMap(JSONObject object) {
+    private static Map<Integer, Command> toCommandMap(JSONArray array) {
         Map<Integer, Command> map = new HashMap<>();
 
-        Iterator<String> keys = object.keys();
-
-        while (keys.hasNext()) {
-            String key = keys.next();
-
+        for(int index = 0; index < array.length(); index++) {
             try {
-                JSONObject entry = object.getJSONObject(key);
+                JSONObject entry = array.getJSONObject(index);
 
                 map.put(entry.getInt(KEYCODE_KEY),
                         Command.deserializeJSON((entry.getJSONObject(COMMAND_KEY))));
