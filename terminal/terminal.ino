@@ -429,18 +429,18 @@ void drawRemote(){
 }
 
 void decideWiFiConnectionIcon(){
-	// decide the color according to connection status and previous status so it doesn't loop
+  // decide the color according to connection status and previous status so it doesn't loop
   if(receiveMode) return;
   if(wifiDeviceConnected == CONNECTED){
     if(wifiConnectedPrevVal == true){
-      return;
+      return; // if the wifi connection status is the same as before - do nothing
     }
-    drawWiFiConnectionIcon();
+    drawWiFiConnectionIcon(); // if different - draw the icon
   }else{
     if(wifiConnectedPrevVal == false){
-      return;
+      return; // if the wifi connection status is the same as before - do nothing
     }
-    drawWiFiConnectionIcon();
+    drawWiFiConnectionIcon(); // if different - draw the icon
   }
 }
 
@@ -470,19 +470,20 @@ void decideBltConnectionIcon(){
   if(receiveMode) return;
   if(bleDeviceConnected){
     if(bltConnectedPrevVal == true){
-      return;
+      return; // if the bluetooth connection status is the same as before - do nothing
     }
-    drawBltConnectionIcon();
+    drawBltConnectionIcon(); // if different - draw the icon
   }else{
     if(bltConnectedPrevVal == false){
-      return;
+      return; // if the bluetooth connection status is the same as before - do nothing
     }
-    drawBltConnectionIcon();
+    drawBltConnectionIcon(); // if different - draw the icon
   }
 }
 
 
 void drawBltConnectionIcon(){
+  // decide the color according to connection status
   uint32_t color;
   if(bleDeviceConnected){
     color = BLT_ICON_COLOR_ON;
@@ -490,8 +491,10 @@ void drawBltConnectionIcon(){
     color = BLT_ICON_COLOR_OFF;
   }
 
+  // empty the region for new icon
   tft.drawRect(BLT_ICON_START_X, BLT_ICON_START_Y, BLT_ICON_WIDTH, BLT_ICON_HEIGHT, BACKGROUND_COLOR);
 
+  // draw the bluetooth icon
   tft.drawLine(BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
   tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, color);
   tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y + BLT_ICON_HEIGHT, color);
