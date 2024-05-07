@@ -8,18 +8,18 @@ import androidx.annotation.Nullable;
 
 import com.google.android.material.button.MaterialButton;
 
-public class Button extends MaterialButton {
+public class ListeningButton extends MaterialButton {
     private OnEnable listener;
 
-    public Button(@NonNull Context context) {
+    public ListeningButton(@NonNull Context context) {
         super(context);
     }
 
-    public Button(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public ListeningButton(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public Button(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public ListeningButton(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 

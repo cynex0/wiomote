@@ -3,4 +3,5 @@
 /.vscode
 /app/build
 /terminal/build
+/terminal/.vscode
 local.properties
