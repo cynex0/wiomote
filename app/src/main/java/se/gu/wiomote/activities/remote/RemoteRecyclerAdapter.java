@@ -13,7 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.configurations.Command;
-import se.gu.wiomote.network.WioMQTTClient;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
     private static final int ADD_BUTTON = 1;

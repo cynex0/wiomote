@@ -1,4 +1,4 @@
-package se.gu.wiomote;
+package se.gu.wiomote.utils;
 
 import android.os.Handler;
 import android.os.Looper;

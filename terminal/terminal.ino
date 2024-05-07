@@ -16,8 +16,10 @@
 
 #include <TFT_eSPI.h>
 
-// Debugging mode
-#define DEBUG
+// Debugging modes
+//#define DEBUG_UI    // additional UI elements
+//#define DEBUG_LOG   // log events to serial
+#define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
 #define BTN_COUNT       6
@@ -62,6 +64,7 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
+#define ICON_COLOR TFT_LIGHTGREY    // Define color for connection icon
 #define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
 #define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
 
@@ -99,6 +102,22 @@
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
+// Wifi connection icon
+#define WIFI_CONNECTION_CIRCLE_X 290
+#define WIFI_CONNECTION_CIRCLE_Y 35
+#define WIFI_CONNECTION_CIRCLE_MAX_RAD 21
+#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF 7
+#define WIFI_CONNECTION_ICON_COLOR_ON TFT_CYAN
+#define WIFI_CONNECTION_ICON_COLOR_OFF TFT_DARKGREY
+
+// Bluetooth connection icon
+#define BLT_ICON_START_X 245
+#define BLT_ICON_START_Y 11
+#define BLT_ICON_WIDTH 15
+#define BLT_ICON_HEIGHT 25
+#define BLT_ICON_COLOR_ON TFT_CYAN
+#define BLT_ICON_COLOR_OFF TFT_DARKGREY
+
 struct Command {
   uint16_t *rawData;
   uint8_t dataLength;
@@ -127,10 +146,15 @@ bool bleOldDeviceConnected;
 
 // MQTT variables
 PubSubClient mqttClient(wifiClient);
+unsigned long lastPinged = 0;
 
 // Logic variables
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
+bool wifiConnectedPrevVal = true;
+bool bltConnectedPrevVal = false;
+
+void decideBltConnectionIcon();
 
 // Motor variables
 const int vibDuration = 200;
@@ -144,19 +168,23 @@ bool isBuzzing = false;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.println("Bluetooth connected");
       #endif
 
       bleDeviceConnected = true;
+      decideBltConnectionIcon();
+      bltConnectedPrevVal = true;
     }
 
     void onDisconnect(BLEServer* bleServer) {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.println("Bluetooth disconnected");
       #endif
 
       bleDeviceConnected = false;
+      decideBltConnectionIcon();
+      bltConnectedPrevVal = false;
     }
 };
 
@@ -165,11 +193,7 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       std::string rxValue = characteristic -> getValue();
 
       const char* data = rxValue.c_str();
-        
-      #ifdef DEBUG
-        Serial.println(data);
-      #endif
-
+  
       wifiInfo.clear();
       deserializeJson(wifiInfo, data);
 
@@ -178,7 +202,8 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
 
       wifiDeviceConnected = DISCONNECTED;
 
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
+        Serial.println(data);
         Serial.println("Cleared existing connections");
       #endif
     }
@@ -212,6 +237,14 @@ void setupBLE() {
   bleServer -> startAdvertising();
 }
 
+void mqttPublishWithLog(const char* topic, const char* payload) {
+  mqttClient.publish(topic, payload);
+  #ifdef DEBUG_LOG
+    Serial.printf("Published message [%s]: %s\n", topic, payload);
+  #endif
+}
+
+// Received an MQTT message
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   char* buff_p = new char[length];
   for (int i = 0; i < length; i++) {
@@ -220,11 +253,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   buff_p[length] = '\0';
 
 
-  #ifdef DEBUG
+  #ifdef DEBUG_LOG
     Serial.print(F("Message arrived [")); Serial.print(F(topic)); Serial.print(F("] "));
 
     Serial.println(buff_p);
-
+  #endif
+  #ifdef DEBUG_UI
     drawRemote();
     tft.setTextSize(TEXT_SIZE_S);
     tft.setCursor(0, TFT_WIDTH - 2); // width is height :)
@@ -255,8 +289,14 @@ void setupMQTT() {
 void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
+    #ifdef MQTT_PING
+      if(millis() - lastPinged > 5000) {
+        mqttPublishWithLog(TOPIC_CONN_OUT, "ping");
+        lastPinged = millis();
+      }
+    #endif
   } else {
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       Serial.println(F("Attempting MQTT connection..."));
     #endif
     
@@ -265,16 +305,15 @@ void updateMQTT() {
     const String clientId = UUID_PREFIX + String(random(0xffff), HEX);
 
     if (mqttClient.connect(clientId.c_str())) {
-      #ifdef DEBUG
-        Serial.println(F("Connected to MQTT server"));
-
-        mqttClient.publish(TOPIC_CONN_OUT, "Publish test WIO");
+      #ifdef DEBUG_LOG
+        Serial.println(F("Connected to MQTT server. Publishing a test message."));
+        mqttPublishWithLog(TOPIC_CONN_OUT, "Publish test WIO");
       #endif
 
       mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
       mqttClient.subscribe(TOPIC_APP_COMMAND); // topic to receive IR commands from the app
     } else {
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
       #endif
     }
@@ -329,7 +368,7 @@ void updateNetwork() {
   }
 
   if(WiFi.isConnected()) {
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
         Serial.println("Connected to " + WiFi.SSID());
         Serial.print(F("IP address: "));
@@ -339,19 +378,26 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
+	decideWiFiConnectionIcon();
+    wifiConnectedPrevVal = true;
+
     updateMQTT();
-  } else {
+  } 
+  else {
     const char *ssid = wifiInfo["ssid"];
 
     if(wifiDeviceConnected != CONNECTING) {  
-      #ifdef DEBUG
+      #ifdef DEBUG_LOG
         Serial.print(F("Connecting to "));
         Serial.println(F(ssid));
       #endif
 
       wifiDeviceConnected = CONNECTING;
 
-      WiFi.begin(ssid, wifiInfo["password"], 0, stringToMAC(wifiInfo["bssid"]));
+	  decideWiFiConnectionIcon();
+      wifiConnectedPrevVal = false;
+
+      WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
     }
   }
 }
@@ -502,7 +548,88 @@ void drawRemote(){
     tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
     tft.drawCircle(15, 22, 6, ARROW_COLOR);
     tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
+
+    // Draw wifi connection status icon
+    drawWiFiConnectionIcon();
+
+    // Draw bluetooth connection status icon
+    drawBltConnectionIcon();
+    
   }
+}
+
+void decideWiFiConnectionIcon(){
+  // decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode) return;
+  if(wifiDeviceConnected == CONNECTED){
+    if(wifiConnectedPrevVal == true){
+      return; // if the wifi connection status is the same as before - do nothing
+    }
+    drawWiFiConnectionIcon(); // if different - draw the icon
+  }else{
+    if(wifiConnectedPrevVal == false){
+      return; // if the wifi connection status is the same as before - do nothing
+    }
+    drawWiFiConnectionIcon(); // if different - draw the icon
+  }
+}
+
+void drawWiFiConnectionIcon(){
+  // decide the color according to connection status
+  uint32_t color;
+  if(wifiDeviceConnected == CONNECTED){
+    color = WIFI_CONNECTION_ICON_COLOR_ON;
+  }else{
+    color = WIFI_CONNECTION_ICON_COLOR_OFF;
+  }
+  // empty the region for new icon
+  tft.drawRect(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, WIFI_CONNECTION_CIRCLE_MAX_RAD * 2, DEFAULT_BG_COLOR);
+
+  // draw 3 circles
+  for(int i = 0; i < 3; i++){
+    tft.drawCircle(WIFI_CONNECTION_CIRCLE_X, WIFI_CONNECTION_CIRCLE_Y, WIFI_CONNECTION_CIRCLE_MAX_RAD - WIFI_CONNECTION_CIRCLE_RADIUS_DIFF * i, color);
+  }
+
+  // use 2 triangles to mask the 3 circles into 3 arcs
+  tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
+  tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
+}
+
+void decideBltConnectionIcon(){
+	// decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode) return;
+  if(bleDeviceConnected){
+    if(bltConnectedPrevVal == true){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }else{
+    if(bltConnectedPrevVal == false){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }
+}
+
+
+void drawBltConnectionIcon(){
+  // decide the color according to connection status
+  uint32_t color;
+  if(bleDeviceConnected){
+    color = BLT_ICON_COLOR_ON;
+  }else{
+    color = BLT_ICON_COLOR_OFF;
+  }
+
+  // empty the region for new icon
+  tft.drawRect(BLT_ICON_START_X, BLT_ICON_START_Y, BLT_ICON_WIDTH, BLT_ICON_HEIGHT, DEFAULT_BG_COLOR);
+
+  // draw the bluetooth icon
+  tft.drawLine(BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
+  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, color);
+  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y + BLT_ICON_HEIGHT, color);
+  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y + BLT_ICON_HEIGHT, BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, color);
+  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
 }
 
 void emitData(const Command& command){
@@ -510,7 +637,7 @@ void emitData(const Command& command){
 		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
     drawEmitSignal();
 
-    #ifdef DEBUG
+    #ifdef DEBUG_LOG
       Serial.print(F("Signal sent: [")); Serial.print(command.dataLength); Serial.print(F("]{"));
 
       for (uint8_t i = 0; i < command.dataLength; i++) {
@@ -648,7 +775,7 @@ void loop() {
 
         startVibration(); // Vibrate after data sent
 
-        #ifdef DEBUG // Flash a circle next to the pressed button label
+        #ifdef DEBUG_UI // Flash a circle next to the pressed button label
           switch(pressed) {
             case POWER_BTN:
               tft.fillCircle(0, 16, 4, TFT_GREEN);
@@ -672,28 +799,28 @@ void loop() {
         #endif
         
 
-        #ifdef DEBUG
+        #ifdef DEBUG_UI
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
         #endif
-			}
-    }	
-	}
+      }
+    }
+  }
 
   // DEBUG: print configured buttons on screen
-  #ifdef DEBUG
+  #ifdef DEBUG_UI
     tft.setTextSize(TEXT_SIZE_M);
 
-    if (commandMap[POWER_BTN].dataLength != 0) {
+    if (commandMap[POWER_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("POWER"), 20, 20);
-    } else if (commandMap[UP_BTN].dataLength != 0) {
+    } else if (commandMap[UP_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("UP"), 20, 40);
-    } else if (commandMap[LEFT_BTN].dataLength != 0) {
+    } else if (commandMap[LEFT_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("LEFT"), 20, 60);
-    } else if (commandMap[RIGHT_BTN].dataLength != 0) {
+    } else if (commandMap[RIGHT_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("RIGHT"), 20, 80);
-    } else if (commandMap[DOWN_BTN].dataLength != 0) {
+    } else if (commandMap[DOWN_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("DOWN"), 20, 100);
-    } else if (commandMap[PRESS_BTN].dataLength != 0) {
+    } else if (commandMap[PRESS_BTN_INDEX].dataLength != 0) {
       tft.drawString(F("OK"), 20, 120);
     }
   #endif

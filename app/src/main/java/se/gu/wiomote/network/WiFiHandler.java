@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 
-import se.gu.wiomote.Utils;
+import se.gu.wiomote.utils.Utils;
 
 public class WiFiHandler {
     private static final ArrayList<OnNetworkChanged> listeners = new ArrayList<>();
@@ -63,20 +63,15 @@ public class WiFiHandler {
                             Utils.runOnUiThread(listener::onConnected);
                         }
                     }
-                }
-            }
+                } else {
+                    currentCapability = UNKNOWN;
 
-            @Override
-            public void onLost(@NonNull Network network) {
-                super.onLost(network);
-
-                currentCapability = UNKNOWN;
-
-                for (OnNetworkChanged listener : listeners) {
-                    Utils.runOnUiThread(() -> {
-                        listener.onWiFiDisconnected();
-                        listener.onDisconnected();
-                    });
+                    for (OnNetworkChanged listener : listeners) {
+                        Utils.runOnUiThread(() -> {
+                            listener.onWiFiDisconnected();
+                            listener.onDisconnected();
+                        });
+                    }
                 }
             }
         });
