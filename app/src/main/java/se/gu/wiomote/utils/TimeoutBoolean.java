@@ -4,6 +4,7 @@ import android.os.Handler;
 
 public class TimeoutBoolean {
     private final Handler handler;
+    private final Runnable runnable;
     private final long timeout;
     private OnUpdate listener;
     private boolean value;
@@ -12,6 +13,13 @@ public class TimeoutBoolean {
         this.timeout = timeout;
         this.value = false;
         this.handler = new Handler();
+        this.runnable = () -> {
+            value = false;
+
+            if (listener != null) {
+                listener.onUpdate(false);
+            }
+        };
     }
 
     public void setTrue() {
@@ -22,13 +30,7 @@ public class TimeoutBoolean {
         }
 
         handler.removeCallbacksAndMessages(null);
-        handler.postDelayed(() -> {
-            value = false;
-
-            if (listener != null) {
-                listener.onUpdate(false);
-            }
-        }, timeout);
+        handler.postDelayed(runnable, timeout);
     }
 
     public boolean getValue() {
@@ -37,6 +39,13 @@ public class TimeoutBoolean {
 
     public void setOnUpdateListener(OnUpdate listener) {
         this.listener = listener;
+    }
+
+    public void forceTimeout() {
+        if (value) {
+            handler.removeCallbacksAndMessages(null);
+            runnable.run();
+        }
     }
 
     public interface OnUpdate {

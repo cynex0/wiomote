@@ -8,7 +8,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.network.WioMQTTClient;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public abstract class NotificationTrayActivity extends AppCompatActivity {
     private View notificationContainer;
@@ -25,7 +25,10 @@ public abstract class NotificationTrayActivity extends AppCompatActivity {
         getLayoutInflater().inflate(layoutResID, root, true);
 
         root.setLayoutTransition(new LayoutTransition());
+    }
 
+    @Override
+    protected void onStart() {
         WioMQTTClient.setOnConnectionStatusChangedListener(new WioMQTTClient.OnConnectionStatusChanged() {
             @Override
             public void onConnected() {
@@ -38,5 +41,7 @@ public abstract class NotificationTrayActivity extends AppCompatActivity {
                 notificationContainer.setVisibility(View.VISIBLE);
             }
         });
+
+        super.onStart();
     }
 }

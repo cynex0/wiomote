@@ -63,20 +63,15 @@ public class WiFiHandler {
                             Utils.runOnUiThread(listener::onConnected);
                         }
                     }
-                }
-            }
+                } else {
+                    currentCapability = UNKNOWN;
 
-            @Override
-            public void onLost(@NonNull Network network) {
-                super.onLost(network);
-
-                currentCapability = UNKNOWN;
-
-                for (OnNetworkChanged listener : listeners) {
-                    Utils.runOnUiThread(() -> {
-                        listener.onWiFiDisconnected();
-                        listener.onDisconnected();
-                    });
+                    for (OnNetworkChanged listener : listeners) {
+                        Utils.runOnUiThread(() -> {
+                            listener.onWiFiDisconnected();
+                            listener.onDisconnected();
+                        });
+                    }
                 }
             }
         });

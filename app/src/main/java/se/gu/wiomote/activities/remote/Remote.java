@@ -15,7 +15,7 @@ import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 import se.gu.wiomote.R;
 import se.gu.wiomote.activities.NotificationTrayActivity;
 import se.gu.wiomote.configurations.Configuration;
-import se.gu.wiomote.network.WioMQTTClient;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class Remote extends NotificationTrayActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";

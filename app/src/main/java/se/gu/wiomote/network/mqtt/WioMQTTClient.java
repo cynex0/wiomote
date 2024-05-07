@@ -1,8 +1,10 @@
-package se.gu.wiomote.network;
+package se.gu.wiomote.network.mqtt;
 
 import android.util.Log;
 
 import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedContext;
+import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedListener;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
@@ -14,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.utils.TimeoutBoolean;
 import se.gu.wiomote.utils.Utils;
 
@@ -24,14 +27,22 @@ public class WioMQTTClient {
     private static final int PORT = 1883;
     private static final String CONN_IN_TOPIC = "wiomote/connection/terminal";
     private static final String CONN_OUT_TOPIC = "wiomote/connection/app";
+    private static final TimeoutBoolean connected = new TimeoutBoolean(6900);
     private static final Mqtt3AsyncClient client = Mqtt3Client.builder()
             .identifier(ID_SUFFIX + UUID.randomUUID())
             .serverHost(HOST)
             .serverPort(PORT)
+            .automaticReconnectWithDefaultConfig()
+            .addConnectedListener(new MqttClientConnectedListener() {
+                @Override
+                public void onConnected(@NotNull MqttClientConnectedContext context) {
+                    state = ConnectionStatus.CONNECTED;
+                }
+            })
             .build()
             .toAsync();
-    private static final TimeoutBoolean connected = new TimeoutBoolean(10000);
     private static WioMQTTClient.OnConnectionStatusChanged listener = null;
+    private static ConnectionStatus state = ConnectionStatus.UNKNOWN;
     private static boolean ready = false;
 
     public static void prepare() {
@@ -48,18 +59,32 @@ public class WioMQTTClient {
                     }));
 
             WiFiHandler.addOnNetworkChangedListener(new WiFiHandler.OnNetworkChanged() {
+
                 @Override
                 public void onConnected() {
-                    client.connect()
-                            .thenCompose(connAck -> { // attach handling
-                                Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
+                    if (state == ConnectionStatus.UNKNOWN) {
+                        client.connect()
+                                .thenCompose(connAck -> { // attach handling
+                                    Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
 
-                                return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
-                            }).thenCompose(subAck -> {
-                                return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
-                            });
+                                    return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
+                                }).thenCompose(subAck -> {
+                                    return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
+                                });
+                    }
 
-                    WiFiHandler.removeOnNetworkChangedListener(this);
+                    state = ConnectionStatus.CONNECTED;
+                }
+
+                @Override
+                public void onDisconnected() {
+                    if (state == ConnectionStatus.CONNECTED) {
+                        connected.forceTimeout();
+
+                        client.disconnect();
+                    }
+
+                    state = ConnectionStatus.DISCONNECTED;
                 }
             });
 

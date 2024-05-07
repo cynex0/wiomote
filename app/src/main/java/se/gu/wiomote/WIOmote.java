@@ -3,7 +3,7 @@ package se.gu.wiomote;
 import android.app.Application;
 
 import se.gu.wiomote.network.WiFiHandler;
-import se.gu.wiomote.network.WioMQTTClient;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class WIOmote extends Application {
     @Override
