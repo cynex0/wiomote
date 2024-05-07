@@ -71,6 +71,7 @@
 // MQTT
 #define MQTT_SERVER "broker.hivemq.com"
 #define MQTT_PORT                 1883
+#define UUID_PREFIX     "WioTerminal-"
 
 #define TOPIC_CONN_OUT "wiomote/connection/terminal"
 #define TOPIC_CONN_IN       "wiomote/connection/app"
@@ -183,7 +184,7 @@ void setupBLE() {
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  char buff_p[length];
+  char* buff_p = new char[length];
   for (int i = 0; i < length; i++) {
     buff_p[i] = (char) payload[i];
   }
@@ -191,16 +192,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 
   #ifdef DEBUG
-    Serial.printf("Message arrived [%s] ", topic);
+    Serial.print(F("Message arrived [")); Serial.print(F(topic)); Serial.print(F("] "));
 
-    for (int i = 0; i < length; i++) {
-      Serial.print((char) payload[i]);
-    }
-    Serial.println();
+    Serial.println(buff_p);
 
     drawRemote();
     tft.setTextSize(TEXT_SIZE_S);
-    tft.drawString("MQTT: " + String(buff_p), 0, TFT_WIDTH - 2); // width is height :)
+    tft.setCursor(0, TFT_WIDTH - 2); // width is height :)
+    tft.print(F("MQTT: ")); tft.print(F(buff_p));
   #endif
 
   // A command sent from the app
@@ -229,16 +228,16 @@ void updateMQTT() {
     mqttClient.loop();
   } else {
     #ifdef DEBUG
-      Serial.println("Attempting MQTT connection...");
+      Serial.println(F("Attempting MQTT connection..."));
     #endif
     
     // Create a random client ID so that it does 
     // not clash with other subscribed clients
-    String clientId = "WioTerminal-" + String(random(0xffff), HEX);
+    const String clientId = UUID_PREFIX + String(random(0xffff), HEX);
 
     if (mqttClient.connect(clientId.c_str())) {
       #ifdef DEBUG
-        Serial.println("Connected to MQTT server");
+        Serial.println(F("Connected to MQTT server"));
 
         mqttClient.publish(TOPIC_CONN_OUT, "Publish test WIO");
       #endif
@@ -247,13 +246,13 @@ void updateMQTT() {
       mqttClient.subscribe(TOPIC_APP_COMMAND); // topic to receive IR commands from the app
     } else {
       #ifdef DEBUG
-        Serial.print("Failed to connect to MQTT server - rc=" + mqttClient.state());
+        Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
       #endif
     }
   }
 }
 
-void WiFiEvent(WiFiEvent_t event){
+void WiFiEvent(const WiFiEvent_t event){
   if(event == SYSTEM_EVENT_STA_DISCONNECTED) {
     wifiDeviceConnected = DISCONNECTED;
   }
@@ -304,7 +303,7 @@ void updateNetwork() {
     #ifdef DEBUG
       if(wifiDeviceConnected != CONNECTED) {
         Serial.println("Connected to " + WiFi.SSID());
-        Serial.print("IP address: ");
+        Serial.print(F("IP address: "));
         Serial.println(WiFi.localIP());
       }
     #endif
@@ -317,7 +316,8 @@ void updateNetwork() {
 
     if(wifiDeviceConnected != CONNECTING) {  
       #ifdef DEBUG
-        Serial.printf("Connecting to %s...\n", ssid);
+        Serial.print(F("Connecting to "));
+        Serial.println(F(ssid));
       #endif
 
       wifiDeviceConnected = CONNECTING;
@@ -353,12 +353,13 @@ int getButtonPressed(){
     "rawData":[<byte0>,<byte1>,...]
   }
 */
-Command deserializeCommand(char* jsonString) {
+Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
   
-  uint8_t dataLength = (*doc)["dataLength"];
+  const uint8_t dataLength = (*doc)["dataLength"];
   JsonArray rawDataJson = (*doc)["rawData"];
+
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
     rawData[i] = rawDataJson[i];
@@ -373,7 +374,7 @@ void drawRemote(){
     tft.fillScreen(TFT_WHITE);
 	  tft.setTextColor(TFT_BLACK);
     tft.setTextSize(TEXT_SIZE_M);
-	  tft.drawString("Recording IR", CENTER_X, CENTER_Y);
+	  tft.drawString(F("Recording IR"), CENTER_X, CENTER_Y);
   } else {
     // Screen background
     tft.fillScreen(BACKGROUND_COLOR);
@@ -383,7 +384,7 @@ void drawRemote(){
     tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);
     tft.setTextSize(TEXT_SIZE_L);
     tft.setTextColor(TFT_WHITE);
-    tft.drawString("OK", CENTER_X, CENTER_Y);
+    tft.drawString(F("OK"), CENTER_X, CENTER_Y);
 
     // Draw top arrow
     tft.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
@@ -413,17 +414,17 @@ void emitData(const Command& command){
 		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
 
     #ifdef DEBUG
-      Serial.print("Signal sent: ["); Serial.print(command.dataLength); Serial.print("]{");
+      Serial.print(F("Signal sent: [")); Serial.print(command.dataLength); Serial.print(F("]{"));
 
       for (uint8_t i = 0; i < command.dataLength; i++) {
         Serial.print(command.rawData[i]);
 
         if (i != command.dataLength - 1) {
-          Serial.print(", ");
+          Serial.print(F(", "));
         }
       }
 
-      Serial.println("}");
+      Serial.println(F("}"));
     #endif
 	}
 }
@@ -454,7 +455,7 @@ void receive(){
 	receiver.enableIRIn();
 
 	if (receiver.getResults()){
-		uint8_t dataLength = recvGlobal.recvLength;
+		const uint8_t dataLength = recvGlobal.recvLength;
 		uint16_t *rawData = new uint16_t[dataLength];
 
 		for (uint8_t i = 1; i < dataLength; i++) {
@@ -462,11 +463,11 @@ void receive(){
 		}
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
-    Command recCommand = {rawData, dataLength};
+    const Command recCommand = {rawData, dataLength};
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
-    tft.drawString("Received. Press a button to save.", CENTER_X, CENTER_Y + 20);
+    tft.drawString(F("Received. Press a button to save."), CENTER_X, CENTER_Y + 20);
 
     int chosenButton;
     
@@ -537,7 +538,7 @@ void loop() {
     int pressed = getButtonPressed();
   
     if (pressed != -1) {
-      Command command = commandMap[pressed];
+      const Command command = commandMap[pressed];
       
 			if (command.dataLength != 0){
         emitData(command);
@@ -582,17 +583,17 @@ void loop() {
     tft.setTextSize(TEXT_SIZE_M);
 
     if (commandMap[POWER_BTN].dataLength != 0) {
-      tft.drawString("POWER", 20, 20);
+      tft.drawString(F("POWER"), 20, 20);
     } else if (commandMap[UP_BTN].dataLength != 0) {
-      tft.drawString("UP", 20, 40);
+      tft.drawString(F("UP"), 20, 40);
     } else if (commandMap[LEFT_BTN].dataLength != 0) {
-      tft.drawString("LEFT", 20, 60);
+      tft.drawString(F("LEFT"), 20, 60);
     } else if (commandMap[RIGHT_BTN].dataLength != 0) {
-      tft.drawString("RIGHT", 20, 80);
+      tft.drawString(F("RIGHT"), 20, 80);
     } else if (commandMap[DOWN_BTN].dataLength != 0) {
-      tft.drawString("DOWN", 20, 100);
+      tft.drawString(F("DOWN"), 20, 100);
     } else if (commandMap[PRESS_BTN].dataLength != 0) {
-      tft.drawString("OK", 20, 120);
+      tft.drawString(F("OK"), 20, 120);
     }
   #endif
   delay(50); // Slow down the loop
