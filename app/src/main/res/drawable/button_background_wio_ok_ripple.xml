@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#37788B7F"
+    android:effectColor="?attr/colorPrimaryContainer">
+
+    <item android:drawable="@drawable/button_background_wio_ok" />
+</ripple>

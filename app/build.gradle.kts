@@ -14,15 +14,27 @@ android {
         versionName = "0.1"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("ANDROID_KEY_STOREFILE") ?: "../keystore-release.jks")
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+        }
+    }
+
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = true
             isDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
             )
         }
-        debug {
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
             isMinifyEnabled = false
             isDebuggable = true
         }
@@ -41,6 +53,7 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.github.rubensousa:gravitysnaphelper:2.2.2")
     implementation("com.google.android.material:material:1.12.0-rc01")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
