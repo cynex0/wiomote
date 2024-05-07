@@ -26,7 +26,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.common.api.ApiException;
@@ -47,7 +46,7 @@ import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.network.WioBluetoothGattCallback;
 import se.gu.wiomote.views.ListeningButton;
 
-public class Setup extends AppCompatActivity {
+public class Setup extends NotificationTrayActivity {
     private static final String TAG = "se.gu.wiomote.Settings";
     private static final String SSID = "ssid";
     private static final String BSSID = "bssid";

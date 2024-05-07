@@ -1,14 +1,10 @@
 package se.gu.wiomote.activities.remote;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -17,11 +13,11 @@ import androidx.recyclerview.widget.SnapHelper;
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.configurations.Command;
+import se.gu.wiomote.activities.NotificationTrayActivity;
 import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.network.WioMQTTClient;
 
-public class Remote extends AppCompatActivity {
+public class Remote extends NotificationTrayActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
     private static final String TAG = "se.gu.wiomote.remote";
 

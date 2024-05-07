@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 
-import se.gu.wiomote.Utils;
+import se.gu.wiomote.utils.Utils;
 
 public class WiFiHandler {
     private static final ArrayList<OnNetworkChanged> listeners = new ArrayList<>();

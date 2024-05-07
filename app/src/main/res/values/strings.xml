@@ -10,6 +10,7 @@
     <string name="bluetooth">Bluetooth</string>
     <string name="bluetooth_connection">Bluetooth needed to connect to the terminal ↗</string>
     <string name="location">Location needed to connect the terminal ↗</string>
+    <string name="connection_lost">Terminal not connected</string>
     <string name="configurations">Configurations</string>
     <string name="ok">OK</string>
 </resources>

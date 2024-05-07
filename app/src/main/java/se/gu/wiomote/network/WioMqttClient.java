@@ -14,6 +14,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import se.gu.wiomote.utils.TimeoutBoolean;
+import se.gu.wiomote.utils.Utils;
+
 public class WioMQTTClient {
     private static final String TAG = "se.gu.wiomote.MQTT";
     private static final String ID_SUFFIX = "WIOmote_app-";
@@ -27,10 +30,23 @@ public class WioMQTTClient {
             .serverPort(PORT)
             .build()
             .toAsync();
+    private static final TimeoutBoolean connected = new TimeoutBoolean(10000);
+    private static WioMQTTClient.OnConnectionStatusChanged listener = null;
     private static boolean ready = false;
 
-    private static void prepareConnection() {
+    public static void prepare() {
         if (!ready) {
+            connected.setOnUpdateListener(value ->
+                    Utils.runOnUiThread(() -> {
+                        if (listener != null) {
+                            if (value) {
+                                listener.onConnected();
+                            } else {
+                                listener.onDisconnected();
+                            }
+                        }
+                    }));
+
             WiFiHandler.addOnNetworkChangedListener(new WiFiHandler.OnNetworkChanged() {
                 @Override
                 public void onConnected() {
@@ -38,9 +54,7 @@ public class WioMQTTClient {
                             .thenCompose(connAck -> { // attach handling
                                 Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
 
-                                return subscribe(CONN_IN_TOPIC, payload -> {
-                                    //TODO handle connection in callback
-                                });
+                                return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
                             }).thenCompose(subAck -> {
                                 return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
                             });
@@ -54,8 +68,6 @@ public class WioMQTTClient {
     }
 
     public static @NotNull CompletableFuture<Mqtt3SubAck> subscribe(String topic, Consumer<Mqtt3Publish> callback) {
-        prepareConnection();
-
         return client.subscribeWith()
                 .topicFilter(topic)
                 .callback(publish -> {
@@ -84,15 +96,30 @@ public class WioMQTTClient {
     }
 
     public static @NotNull CompletableFuture<@NotNull Mqtt3Publish> publish(String topic, byte[] bytes) {
-        prepareConnection();
-
         Mqtt3Publish message = Mqtt3Publish.builder()
                 .topic(topic)
                 .payload(bytes)
                 .qos(MqttQos.AT_LEAST_ONCE)
                 .build();
 
-        Log.i(TAG, "publish[" + topic + "]: " + new String(bytes));
         return client.publish(message);
+    }
+
+    public static void setOnConnectionStatusChangedListener(WioMQTTClient.OnConnectionStatusChanged onConnectionStatusChangedListener) {
+        listener = onConnectionStatusChangedListener;
+
+        if (listener != null) {
+            if (connected.getValue()) {
+                listener.onConnected();
+            } else {
+                listener.onDisconnected();
+            }
+        }
+    }
+
+    public interface OnConnectionStatusChanged {
+        void onConnected();
+
+        void onDisconnected();
     }
 }

@@ -21,7 +21,7 @@ import androidx.core.content.ContextCompat;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import se.gu.wiomote.Utils;
+import se.gu.wiomote.utils.Utils;
 
 public class WioBluetoothGattCallback extends BluetoothGattCallback {
     private static final String TAG = "se.gu.wiomote.WioBluetoothGattCallback";

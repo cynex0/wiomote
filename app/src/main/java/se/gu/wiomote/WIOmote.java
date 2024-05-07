@@ -3,6 +3,7 @@ package se.gu.wiomote;
 import android.app.Application;
 
 import se.gu.wiomote.network.WiFiHandler;
+import se.gu.wiomote.network.WioMQTTClient;
 
 public class WIOmote extends Application {
     @Override
@@ -10,5 +11,6 @@ public class WIOmote extends Application {
         super.onCreate();
 
         WiFiHandler.prepare(this);
+        WioMQTTClient.prepare();
     }
 }
