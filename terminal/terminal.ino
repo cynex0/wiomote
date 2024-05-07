@@ -31,6 +31,12 @@
 // Motor pin
 #define MO_PIN D0
 
+// Buzzer pin
+#define BUZZER_PIN WIO_BUZZER 
+
+// Buzzer constants
+#define BUZZER_FRQ 128 // Buzzer PWM frequency
+
 // UI elements
 #define CIRCLE_COLOR        TFT_BLUE
 #define OUTER_CIRCLE_COLOR TFT_WHITE
@@ -38,6 +44,14 @@
 #define CENTER_X                 160  // Middle point of screen X-axis
 #define CENTER_Y                 120  // Middle point of screen Y-axis
 #define SCREEN_ROTATION            3
+
+// Constants for signal icon
+#define SIGNAL_ICON_X            280  // X placement of icon
+#define SIGNAL_ICON_Y            200  // Y placement of icon
+#define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
+#define ICON_OUTER_RADIUS         30  // Radius of the largest circle
+#define ICON_RING_SPACING          5  // Space between every ring in icon
+#define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
 
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
@@ -48,7 +62,12 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
-#define BACKGROUND_COLOR TFT_BLACK  // Define screen color
+#define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
+#define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
+
+#define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
+#define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
+
 
 // Buttons
 #define UP_BTN        WIO_5S_UP
@@ -112,6 +131,16 @@ PubSubClient mqttClient(wifiClient);
 // Logic variables
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
+
+// Motor variables
+const int vibDuration = 200;
+unsigned long lastVibrated = 0;
+bool isVibrating = false;
+
+// Buzzer variables
+const int buzzDuration = 400;
+unsigned long lastBuzzed = 0;
+bool isBuzzing = false;
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -369,21 +398,88 @@ Command deserializeCommand(const char* jsonString) {
   return {rawData, dataLength};
 }
 
+void startBuzzer() {
+
+  if (!(isBuzzing)) {  // Checks that buzzer isnt active already
+    
+    analogWrite(BUZZER_PIN, BUZZER_FRQ); // Start buzzer
+    lastBuzzed = millis();          // Log the time of activation
+    isBuzzing = true;               // Flag that buzzer is active
+  }
+}
+
+void updateBuzzer () { // Turns off buzzer after set duration
+  
+  if (isBuzzing && (millis() - lastBuzzed >= buzzDuration)) { // Check if duration has passed
+
+    analogWrite(BUZZER_PIN, 0);
+    isBuzzing = false;
+  }
+}
+
+void startVibration() {
+
+  if (!(isVibrating)) {  // Ensures a vibration isnt already triggered
+    
+    digitalWrite(MO_PIN, HIGH); // Start vibration
+    lastVibrated = millis();    // Log the time of activation
+    isVibrating = true;         // Flag for active vibration
+  }
+}
+
+void updateVibration() { // Turns off vibration after set duration
+  
+  if (isVibrating && (millis() - lastVibrated >= vibDuration)) { // Check if duration has passed
+
+    digitalWrite(MO_PIN, LOW);
+    isVibrating = false;
+  }
+}
+
+void drawReceiveSignal() {  // Draw circles for incomming signal
+
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
+
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(30);
+  }
+
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
+    delay(30);
+  }
+}
+
+void drawEmitSignal() {  // Draw circles for outgoing signal
+
+  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
+    
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
+    delay(30);
+  }
+
+  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
+    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
+    delay(30);
+  }
+}
+
 void drawRemote(){
   if (receiveMode) {
-    tft.fillScreen(TFT_WHITE);
-	  tft.setTextColor(TFT_BLACK);
+    tft.fillScreen(INVERTED_BG_COLOR);
+	  tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
 	  tft.drawString(F("Recording IR"), CENTER_X, CENTER_Y);
   } else {
     // Screen background
-    tft.fillScreen(BACKGROUND_COLOR);
+    tft.fillScreen(DEFAULT_BG_COLOR);
 
     // Middle button 
     tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);
     tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);
     tft.setTextSize(TEXT_SIZE_L);
-    tft.setTextColor(TFT_WHITE);
+    tft.setTextColor(DEFAULT_TEXT_COLOR);;
     tft.drawString(F("OK"), CENTER_X, CENTER_Y);
 
     // Draw top arrow
@@ -412,6 +508,7 @@ void drawRemote(){
 void emitData(const Command& command){
 	if (command.rawData != nullptr){
 		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
+    drawEmitSignal();
 
     #ifdef DEBUG
       Serial.print(F("Signal sent: [")); Serial.print(command.dataLength); Serial.print(F("]{"));
@@ -431,7 +528,8 @@ void emitData(const Command& command){
 
 void switchMode(){
   receiveMode = !receiveMode;
-
+  
+  startBuzzer();
 	drawRemote();
 }
 
@@ -457,13 +555,14 @@ void receive(){
 	if (receiver.getResults()){
 		const uint8_t dataLength = recvGlobal.recvLength;
 		uint16_t *rawData = new uint16_t[dataLength];
-
+    
 		for (uint8_t i = 1; i < dataLength; i++) {
 			rawData[i - 1] = recvGlobal.recvBuffer[i];
 		}
 
 		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     const Command recCommand = {rawData, dataLength};
+    drawReceiveSignal();
     
     // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
@@ -504,6 +603,8 @@ void setup() {
 	pinMode(WIO_KEY_C, INPUT_PULLUP);
 
 	pinMode(MO_PIN, OUTPUT); 
+  
+  pinMode(BUZZER_PIN, OUTPUT);
 
   // Initialize commands "map"
   for(uint8_t i = 0; i < BTN_COUNT; i++){
@@ -521,7 +622,9 @@ void setup() {
 
 void loop() {
   updateNetwork();
-  
+  updateVibration();
+  updateBuzzer();
+
   // Mode button logic
   bool modeBtnState = digitalRead(MODE_BTN);
   if (modeBtnState != prevModeBtnState) {
@@ -539,11 +642,11 @@ void loop() {
   
     if (pressed != -1) {
       const Command command = commandMap[pressed];
-      
+
 			if (command.dataLength != 0){
         emitData(command);
 
-        digitalWrite(MO_PIN, HIGH); // Vibrate if data sent
+        startVibration(); // Vibrate after data sent
 
         #ifdef DEBUG // Flash a circle next to the pressed button label
           switch(pressed) {
@@ -567,9 +670,7 @@ void loop() {
               break;
           }
         #endif
-
-				delay(250);
-				digitalWrite(MO_PIN, LOW);
+        
 
         #ifdef DEBUG
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
