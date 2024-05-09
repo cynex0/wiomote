@@ -154,6 +154,7 @@ unsigned long lastPinged = 0;
 bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 int chosenButton = -1; // Button selection in the cloning mode
+bool chosenFromApp = false;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
@@ -275,7 +276,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     if (!receiveMode) {
       emitData(command);
     } else {
-      
+      chosenButton = -1 * (command.keyCode + 1);
+      chosenFromApp = true;
     }
   }
 }
@@ -747,8 +749,8 @@ void receive() {
 	}
 
   int pressedButton = getButtonPressedIndex();
-  if (pressedButton != -1 && pressedButton != chosenButton) {
-    chosenButton = pressedButton;
+  if ((pressedButton != -1 || chosenFromApp) && pressedButton != chosenButton) {
+    if(!chosenFromApp) chosenButton = pressedButton;
     tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
     tft.setTextSize(TEXT_SIZE_M);
     char message[16];
@@ -756,6 +758,7 @@ void receive() {
     tft.drawString(message, CENTER_X, CENTER_Y);
     tft.setTextSize(TEXT_SIZE_S);
     tft.drawString(F("Waiting for IR."), CENTER_X, CENTER_Y + 20);
+    chosenFromApp = false;
   }
   
   // wait until a button is pressed
@@ -782,6 +785,7 @@ void receive() {
       drawReceiveSignal();
       drawRemote(); // Reset the UI
       chosenButton = -1;
+      chosenFromApp = false;
     }
   } 
 }
