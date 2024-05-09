@@ -48,23 +48,23 @@
 #define SCREEN_ROTATION            3
 
 // Constants for signal icon
-#define SIGNAL_ICON_X            280  // X placement of icon
-#define SIGNAL_ICON_Y            200  // Y placement of icon
-#define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
-#define ICON_OUTER_RADIUS         30  // Radius of the largest circle
-#define ICON_RING_SPACING          5  // Space between every ring in icon
-#define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
+#define SIGNAL_ICON_X          280  // X placement of icon
+#define SIGNAL_ICON_Y          200  // Y placement of icon
+#define ICON_INNER_RADIUS        5  // Radius of the smallest cirlce
+#define ICON_OUTER_RADIUS       30  // Radius of the largest circle
+#define ICON_RING_SPACING        5  // Space between every ring in icon
+#define ICON_SIGNAL_COLOR TFT_BLUE  // Color of the moving signal rings
 
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
 #define ARROW_LENGTH       40  // Value of arrow length
 #define ARROW_COLOR TFT_WHITE
 
-#define TEXT_SIZE_L          3
-#define TEXT_SIZE_M          2
-#define TEXT_SIZE_S          1
+#define TEXT_SIZE_L 3
+#define TEXT_SIZE_M 2
+#define TEXT_SIZE_S 1
 
-#define ICON_COLOR TFT_LIGHTGREY    // Define color for connection icon
+#define ICON_COLOR      TFT_LIGHTGREY  // Define color for connection icon
 #define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
 #define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
 
@@ -73,13 +73,13 @@
 
 
 // Buttons
-#define UP_BTN        WIO_5S_UP
-#define DOWN_BTN    WIO_5S_DOWN
-#define LEFT_BTN    WIO_5S_LEFT
-#define RIGHT_BTN  WIO_5S_RIGHT
-#define PRESS_BTN  WIO_5S_PRESS
-#define POWER_BTN     WIO_KEY_C
-#define MODE_BTN      WIO_KEY_A
+#define UP_BTN       WIO_5S_UP
+#define DOWN_BTN   WIO_5S_DOWN
+#define LEFT_BTN   WIO_5S_LEFT
+#define RIGHT_BTN WIO_5S_RIGHT
+#define PRESS_BTN WIO_5S_PRESS
+#define POWER_BTN    WIO_KEY_C
+#define MODE_BTN     WIO_KEY_A
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -97,25 +97,26 @@
 
 #define TOPIC_CONN_OUT "wiomote/connection/terminal"
 #define TOPIC_CONN_IN       "wiomote/connection/app"
-#define TOPIC_APP_COMMAND           "wiomote/ir/app"
+#define TOPIC_IR_IN                 "wiomote/ir/app"
+#define TOPIC_IR_OUT           "wiomote/ir/terminal"
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
 // Wifi connection icon
-#define WIFI_CONNECTION_CIRCLE_X 290
-#define WIFI_CONNECTION_CIRCLE_Y 35
-#define WIFI_CONNECTION_CIRCLE_MAX_RAD 21
-#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF 7
-#define WIFI_CONNECTION_ICON_COLOR_ON TFT_CYAN
+#define WIFI_CONNECTION_CIRCLE_X                290
+#define WIFI_CONNECTION_CIRCLE_Y                 35
+#define WIFI_CONNECTION_CIRCLE_MAX_RAD           21
+#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF        7
+#define WIFI_CONNECTION_ICON_COLOR_ON      TFT_CYAN
 #define WIFI_CONNECTION_ICON_COLOR_OFF TFT_DARKGREY
 
 // Bluetooth connection icon
-#define BLT_ICON_START_X 245
-#define BLT_ICON_START_Y 11
-#define BLT_ICON_WIDTH 15
-#define BLT_ICON_HEIGHT 25
-#define BLT_ICON_COLOR_ON TFT_CYAN
+#define BLT_ICON_START_X            245
+#define BLT_ICON_START_Y             11
+#define BLT_ICON_WIDTH               15
+#define BLT_ICON_HEIGHT              25
+#define BLT_ICON_COLOR_ON      TFT_CYAN
 #define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
 struct Command {
@@ -170,7 +171,7 @@ bool isBuzzing = false;
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println("Bluetooth connected");
+        Serial.println(F("Bluetooth connected"));
       #endif
 
       bleDeviceConnected = true;
@@ -180,7 +181,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println("Bluetooth disconnected");
+        Serial.println(F("Bluetooth disconnected"));
       #endif
 
       bleDeviceConnected = false;
@@ -205,7 +206,7 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
 
       #ifdef DEBUG_LOG
         Serial.println(data);
-        Serial.println("Cleared existing connections");
+        Serial.println(F("Cleared existing connections"));
       #endif
     }
 };
@@ -241,7 +242,8 @@ void setupBLE() {
 void mqttPublishWithLog(const char* topic, const char* payload) {
   mqttClient.publish(topic, payload);
   #ifdef DEBUG_LOG
-    Serial.printf("Published message [%s]: %s\n", topic, payload);
+    Serial.print(F("Published message [")); Serial.print(topic); Serial.print(F("]: "));
+    Serial.println(payload);
   #endif
 }
 
@@ -267,7 +269,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #endif
 
   // A command sent from the app
-  if (strcmp(topic, TOPIC_APP_COMMAND) == 0) {
+  if (strcmp(topic, TOPIC_IR_IN) == 0) {
     Command command = deserializeCommand(buff_p);
 
     emitData(command);
@@ -312,7 +314,7 @@ void updateMQTT() {
       #endif
 
       mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
-      mqttClient.subscribe(TOPIC_APP_COMMAND); // topic to receive IR commands from the app
+      mqttClient.subscribe(TOPIC_IR_IN); // topic to receive IR commands from the app
     } else {
       #ifdef DEBUG_LOG
         Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
@@ -371,7 +373,7 @@ void updateNetwork() {
   if(WiFi.isConnected()) {
     #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
-        Serial.println("Connected to " + WiFi.SSID());
+        Serial.print(F("Connected to ") Serial.println(WiFi.SSID());
         Serial.print(F("IP address: "));
         Serial.println(WiFi.localIP());
       }
@@ -450,8 +452,7 @@ const char* getButtonName(const int index) {
 
 char* serializeCommand(const Command &cmd, const int button) {
   JsonDocument doc;
-  char* out = new char[128]; // Buffer to hold the output
-  size_t capacity;
+  char* out = new char[1024]; // Buffer to hold the output
   doc["dataLength"] = cmd.dataLength;
 
   JsonArray data = doc["data"].to<JsonArray>();
@@ -460,7 +461,7 @@ char* serializeCommand(const Command &cmd, const int button) {
   }
 
   doc["button"] = getButtonName(button);
-  serializeJson(doc, out, 128);
+  serializeJson(doc, out, 1024);
   return out;
 }
 
@@ -751,7 +752,7 @@ void receive() {
       Command recCommand = {rawData, dataLength};
       commandMap[chosenButton] = recCommand; // Write the received command to the map
       
-      mqttClient.publish("wiomote/command/cloning", serializeCommand(recCommand, chosenButton));
+      mqttClient.publish(TOPIC_IR_OUT, serializeCommand(recCommand, chosenButton));
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
       drawReceiveSignal();
