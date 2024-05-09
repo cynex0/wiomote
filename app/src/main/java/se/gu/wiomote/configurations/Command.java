@@ -14,6 +14,7 @@ public class Command implements Serializable {
     private static final String LABEL_KEY = "label";
     private static final String LENGTH_KEY = "dataLength";
     private static final String DATA_KEY = "rawData";
+    private static final String COMMAND_KEY = "command";
     private final int[] rawData;
     public String label;
 
@@ -53,6 +54,12 @@ public class Command implements Serializable {
         return serializeJSON(false);
     }
 
+    /* Expected format (may contain more fields):
+    {
+      "label" : "...",
+      "rawData" : [ <byte0>, ...]
+    }
+    */
     public static Command deserializeJSON(JSONObject jsonObject) throws JSONException {
         JSONArray bytesJSON = jsonObject.getJSONArray(DATA_KEY);
         int[] bytes = new int[bytesJSON.length()];

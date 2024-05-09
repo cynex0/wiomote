@@ -54,6 +54,18 @@ public class Configuration {
         commands.put(keyCode, command);
     }
 
+    public void addCommandFromJSON(String jsonString) {
+        try {
+            JSONObject jsonObject = new JSONObject(jsonString);
+            addCommand(jsonObject.getInt(KEYCODE_KEY),
+                    Command.deserializeJSON(jsonObject.getJSONObject(COMMAND_KEY)));
+        } catch (JSONException e) {
+            Log.e(TAG, "deserialize: Malformed command.");
+
+            return;
+        }
+    }
+
 
     /* JSON Format (prettified):
     {

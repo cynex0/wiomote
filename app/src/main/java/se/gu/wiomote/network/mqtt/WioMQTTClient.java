@@ -1,7 +1,10 @@
 package se.gu.wiomote.network.mqtt;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import android.util.Log;
 
+import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedContext;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedListener;
@@ -27,6 +30,7 @@ public class WioMQTTClient {
     private static final int PORT = 1883;
     private static final String CONN_IN_TOPIC = "wiomote/connection/terminal";
     private static final String CONN_OUT_TOPIC = "wiomote/connection/app";
+    private static final String IR_IN_TOPIC = "wiomote/ir/terminal";
     private static final TimeoutBoolean connected = new TimeoutBoolean(6900);
     private static final Mqtt3AsyncClient client = Mqtt3Client.builder()
             .identifier(ID_SUFFIX + UUID.randomUUID())
@@ -41,7 +45,10 @@ public class WioMQTTClient {
             })
             .build()
             .toAsync();
-    private static WioMQTTClient.OnConnectionStatusChanged listener = null;
+
+    ; // 2
+    private static WioMQTTClient.OnConnectionStatusChanged connectionListener = null;
+    private static CommandReceivedListener commandListener = null;
     private static ConnectionStatus state = ConnectionStatus.UNKNOWN;
     private static boolean ready = false;
 
@@ -49,11 +56,11 @@ public class WioMQTTClient {
         if (!ready) {
             connected.setOnUpdateListener(value ->
                     Utils.runOnUiThread(() -> {
-                        if (listener != null) {
+                        if (connectionListener != null) {
                             if (value) {
-                                listener.onConnected();
+                                connectionListener.onConnected();
                             } else {
-                                listener.onDisconnected();
+                                connectionListener.onDisconnected();
                             }
                         }
                     }));
@@ -67,6 +74,7 @@ public class WioMQTTClient {
                                 .thenCompose(connAck -> { // attach handling
                                     Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
 
+                                    subscribe(IR_IN_TOPIC, payload -> commandListener.onCommandReceived(payload));
                                     return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
                                 }).thenCompose(subAck -> {
                                     return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
@@ -131,20 +139,28 @@ public class WioMQTTClient {
     }
 
     public static void setOnConnectionStatusChangedListener(WioMQTTClient.OnConnectionStatusChanged onConnectionStatusChangedListener) {
-        listener = onConnectionStatusChangedListener;
+        connectionListener = onConnectionStatusChangedListener;
 
-        if (listener != null) {
+        if (connectionListener != null) {
             if (connected.getValue()) {
-                listener.onConnected();
+                connectionListener.onConnected();
             } else {
-                listener.onDisconnected();
+                connectionListener.onDisconnected();
             }
         }
+    }
+
+    public static void setCommandReceivedListener(CommandReceivedListener listener) {
+        commandListener = listener;
     }
 
     public interface OnConnectionStatusChanged {
         void onConnected();
 
         void onDisconnected();
+    }
+
+    public interface CommandReceivedListener {
+        void onCommandReceived(Mqtt3Publish payload);
     }
 }
