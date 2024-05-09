@@ -18,7 +18,7 @@
 
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
-//#define DEBUG_LOG   // log events to serial
+#define DEBUG_LOG   // log events to serial
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
@@ -122,6 +122,7 @@
 struct Command {
   uint16_t *rawData;
   uint8_t dataLength;
+  short keyCode;
 };
 
 // Button map to commands
@@ -258,7 +259,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
   #ifdef DEBUG_LOG
     Serial.print(F("Message arrived [")); Serial.print(F(topic)); Serial.print(F("] "));
-
     Serial.println(buff_p);
   #endif
   #ifdef DEBUG_UI
@@ -272,9 +272,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (strcmp(topic, TOPIC_IR_IN) == 0) {
     Command command = deserializeCommand(buff_p);
 
-    emitData(command);
-
-    delete[] command.rawData;
+    if (!receiveMode) {
+      emitData(command);
+    } else {
+      
+    }
   }
 }
 
@@ -451,33 +453,54 @@ const char* getButtonName(const int index) {
   return out;
 }
 
-char* serializeCommand(const Command &cmd, const int button) {
-  JsonDocument doc;
-  char* out = new char[1024]; // Buffer to hold the output
-  doc["dataLength"] = cmd.dataLength;
 
-  JsonArray data = doc["data"].to<JsonArray>();
-  for(int i = 0; i < cmd.dataLength; i++) {
-    data.add(cmd.rawData[i]);
+/* JSON format (may also contain more keys):
+  {
+    "keyCode":<keyCode>,
+    "command":{
+      "label":<label>
+      "dataLength":<length>,
+      "rawData":[<byte0>,<byte1>,...]
+    }
+  }
+*/
+char* serializeCommand(const Command& command) {
+  JsonDocument* doc = new JsonDocument;
+  JsonObject commandObj = doc->createNestedObject("command");
+
+  (*doc)["keyCode"] = command.keyCode;
+  commandObj["label"] = getButtonName(-1 * (command.keyCode + 1));
+  commandObj["dataLength"] = command.dataLength;
+
+  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
+  for (uint8_t i = 0; i < command.dataLength; i++) {
+	  rawDataJson.add(command.rawData[i]);
   }
 
-  doc["button"] = getButtonName(button);
-  serializeJson(doc, out, 1024);
+  char* out = new char[1024]; // Buffer to hold the output
+  serializeJson(*doc, out, 1024);
+
+  delete doc;
   return out;
 }
 
 /* Expected format (may also contain more keys):
   {
-    "dataLength":<length>,
-    "rawData":[<byte0>,<byte1>,...]
+    "keyCode":<keyCode>,
+    "command":{
+      "dataLength":<length>,
+      "rawData":[<byte0>,<byte1>,...]
+    }
   }
 */
 Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
   
-  const uint8_t dataLength = (*doc)["dataLength"];
-  JsonArray rawDataJson = (*doc)["rawData"];
+  short keyCode = (*doc)[F("keyCode")]; 
+
+  const uint8_t dataLength = (*doc)[F("command")][F("dataLength")];
+  JsonArray rawDataJson = (*doc)[F("command")][F("rawData")];
 
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
@@ -485,27 +508,7 @@ Command deserializeCommand(const char* jsonString) {
   }
 
   delete doc;
-  return {rawData, dataLength};
-}
-
-String serializeCommand(const int keyCode, char* label, const Command& command) {
-  JsonDocument* doc = new JsonDocument;
-  JsonObject commandObj = doc->createNestedObject("command");
-
-  (*doc)["keyCode"] = keyCode;
-  commandObj["label"] = label;
-  commandObj["dataLength"] = command.dataLength;
-
-  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
-  for (uint8_t i = 0; i < command.dataLength; i++) {
-	rawDataJson.add(command.rawData[i]);
-  }
-
-  String out;
-  serializeJson(*doc, out);
-
-  delete doc;
-  return out;
+  return {rawData, dataLength, keyCode};
 }
 
 void startBuzzer() {
@@ -770,10 +773,10 @@ void receive() {
 
       rawData[dataLength - 1] = 1000; // Arbitrary trailing space
       
-      Command recCommand = {rawData, dataLength};
+      Command recCommand = {rawData, dataLength, -1 * (chosenButton + 1)}; 
       commandMap[chosenButton] = recCommand; // Write the received command to the map
       
-      mqttClient.publish(TOPIC_IR_OUT, serializeCommand(recCommand, chosenButton));
+      mqttPublishWithLog(TOPIC_IR_OUT, serializeCommand(recCommand));
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
       drawReceiveSignal();

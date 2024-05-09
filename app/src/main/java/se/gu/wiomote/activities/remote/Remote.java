@@ -12,6 +12,10 @@ import androidx.recyclerview.widget.SnapHelper;
 
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 import se.gu.wiomote.R;
 import se.gu.wiomote.activities.NotificationTrayActivity;
 import se.gu.wiomote.configurations.Configuration;
@@ -20,6 +24,7 @@ import se.gu.wiomote.network.mqtt.WioMQTTClient;
 public class Remote extends NotificationTrayActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
     private static final String TAG = "se.gu.wiomote.remote";
+    private final Map<Integer, View> basicButtonMap = new HashMap<>();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,18 +51,22 @@ public class Remote extends NotificationTrayActivity {
         View down = findViewById(R.id.down);
         View right = findViewById(R.id.right);
 
-        power.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-1).serializeJSON().getBytes())); // Power
-        ok.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-6).serializeJSON().getBytes())); // OK
-        up.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-2).serializeJSON().getBytes())); // Up
-        left.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-5).serializeJSON().getBytes())); // Left
-        down.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-4).serializeJSON().getBytes())); // Down
-        right.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                config.getCommandForKeyCode(-3).serializeJSON().getBytes())); // Right
+        basicButtonMap.put(-1, power);
+        basicButtonMap.put(-2, up);
+        basicButtonMap.put(-3, right);
+        basicButtonMap.put(-4, down);
+        basicButtonMap.put(-5, left);
+        basicButtonMap.put(-6, ok);
+
+        for (Map.Entry<Integer,View> entry : basicButtonMap.entrySet()) {
+            View button = entry.getValue();
+            if (config != null) {
+                button.setOnClickListener(v -> {
+                    WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
+                            config.serializeCommand(entry.getKey()).getBytes());
+                });
+            }
+        }
 
         recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
                 LinearLayoutManager.HORIZONTAL, false));

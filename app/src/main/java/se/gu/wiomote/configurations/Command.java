@@ -29,22 +29,28 @@ public class Command implements Serializable {
 
     /* JSON Format (prettified):
     {
-      "label" : "...",
+      "label" : "...",              // can be omitted when sending to the terminal
       "dataLength" : <length>,
       "rawData" : [ <byte0>, ...]
     }
     */
-    public String serializeJSON() {
+    public String serializeJSON(boolean omitLabel) {
         StringBuilder builder = new StringBuilder();
 
-        builder.append("{")
-                .append("\"" + LABEL_KEY + "\":\"").append(label).append("\",")           // "label":"...",
-                .append("\"" + LENGTH_KEY + "\":").append(rawData.length).append(",")     // "dataLength":<length>,
-                .append("\"" + DATA_KEY + "\":")                                          // "bytes":[
-                .append(Arrays.toString(rawData).replaceAll("\\s+", "")) // <byte0>,...
+        builder.append("{");
+
+        if(!omitLabel) builder.append("\"" + LABEL_KEY + "\":\"").append(label).append("\","); // "label":"...",
+
+        builder.append("\"" + LENGTH_KEY + "\":").append(rawData.length).append(",")       // "dataLength":<length>,
+                .append("\"" + DATA_KEY + "\":")                                            // "bytes":[
+                .append(Arrays.toString(rawData).replaceAll("\\s+", ""))   // <byte0>,...
                 .append("}");
 
         return builder.toString();
+    }
+
+    public String serializeJSON() {
+        return serializeJSON(false);
     }
 
     public static Command deserializeJSON(JSONObject jsonObject) throws JSONException {

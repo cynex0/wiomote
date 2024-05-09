@@ -68,7 +68,7 @@ public class Configuration {
               "dataLength" : <length>,
               "rawData" : [ <byte0>, ...]
             }
-        }
+         }
       ]
     }
      */
@@ -107,6 +107,28 @@ public class Configuration {
 
             return null;
         }
+    }
+
+    /* Reduced JSON format for the terminal:
+    {
+        "keyCode": <keyCode>,
+        "dataLength": <dataLength>,
+        "rawData": [<byte0>, <byte1>, ...]
+    }
+    */
+    public String serializeCommand(int keyCode) {
+        StringBuilder builder = new StringBuilder();
+        Command command = getCommandForKeyCode(keyCode);
+
+        builder.append("{")
+                .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<keyCode>,
+                .append("\"" + COMMAND_KEY + "\":");
+
+        if (command == null)
+            command = new Command("EMPTY", new int[0]);
+
+        builder.append(command.serializeJSON(true)).append("}");
+        return builder.toString();
     }
 
     private static Map<Integer, Command> toCommandMap(JSONArray array) {
