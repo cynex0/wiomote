@@ -9,7 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public class Configuration {
@@ -92,15 +91,25 @@ public class Configuration {
                 .append("\"" + NAME_KEY + "\":\"").append(uuid).append("\",") // "name":"<name>",
                 .append("\"" + COMMANDS_KEY + "\":["); // "commands":[
 
-        commands.forEach((keyCode, command) -> {
+        boolean hasAtLeastOneItem = false;
+
+        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
+            Integer keyCode = entry.getKey();
+            Command command = entry.getValue();
+
+            if (hasAtLeastOneItem) {
+                builder.append(",");
+            }
+
             builder.append("{")
                     .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<number>,
                     .append("\"" + COMMAND_KEY + "\":") // "command":
                     .append(command.serializeJSON()) // (see Command.java)
-                    .append(",");
-        });
+                    .append("}");
 
-        if (!commands.isEmpty()) builder.deleteCharAt(builder.length() - 1); // Delete trailing comma if at least 1 command is present
+            hasAtLeastOneItem = true;
+        }
+
         builder.append("]}");
 
         Log.i(TAG, "serializeJSON: " + builder);
@@ -116,9 +125,9 @@ public class Configuration {
                     jsonObject.getJSONArray(COMMANDS_KEY));
         } catch (JSONException exception) {
             Log.e(TAG, "deserialize: Malformed configuration.");
-
-            return null;
         }
+
+        return null;
     }
 
     /* Reduced JSON format for the terminal:
@@ -146,7 +155,7 @@ public class Configuration {
     private static Map<Integer, Command> toCommandMap(JSONArray array) {
         Map<Integer, Command> map = new HashMap<>();
 
-        for(int index = 0; index < array.length(); index++) {
+        for (int index = 0; index < array.length(); index++) {
             try {
                 JSONObject entry = array.getJSONObject(index);
 

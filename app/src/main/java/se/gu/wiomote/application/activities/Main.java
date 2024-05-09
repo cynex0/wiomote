@@ -1,12 +1,13 @@
-package se.gu.wiomote.activities;
+package se.gu.wiomote.application.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.activities.remote.Remote;
+import se.gu.wiomote.application.activities.remote.Remote;
 
 public class Main extends NotificationTrayActivity {
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

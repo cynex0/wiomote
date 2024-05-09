@@ -1,4 +1,4 @@
-package se.gu.wiomote.activities.remote;
+package se.gu.wiomote.application.activities.remote;
 
 import android.app.Activity;
 import android.view.LayoutInflater;
