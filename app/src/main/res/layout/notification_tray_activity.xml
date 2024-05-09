@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/notificationTrayActivityRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/notificationTrayActivityNotificationContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorErrorContainer"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/notificationTrayActivityNotification"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="10dp"
+            android:drawableLeft="@drawable/ic_warning"
+            android:fontFamily="@font/dmsans_regular"
+            android:gravity="center"
+            android:lineHeight="@dimen/button_text_size"
+            android:padding="@dimen/button_padding"
+            android:textColor="?attr/colorOnErrorContainer"
+            android:textSize="@dimen/button_text_size"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>
