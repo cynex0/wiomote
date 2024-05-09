@@ -373,7 +373,8 @@ void updateNetwork() {
   if(WiFi.isConnected()) {
     #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
-        Serial.print(F("Connected to ") Serial.println(WiFi.SSID());
+        Serial.print(F("Connected to "));
+		    Serial.println(WiFi.SSID());
         Serial.print(F("IP address: "));
         Serial.println(WiFi.localIP());
       }
@@ -485,6 +486,26 @@ Command deserializeCommand(const char* jsonString) {
 
   delete doc;
   return {rawData, dataLength};
+}
+
+String serializeCommand(const int keyCode, char* label, const Command& command) {
+  JsonDocument* doc = new JsonDocument;
+  JsonObject commandObj = doc->createNestedObject("command");
+
+  (*doc)["keyCode"] = keyCode;
+  commandObj["label"] = label;
+  commandObj["dataLength"] = command.dataLength;
+
+  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
+  for (uint8_t i = 0; i < command.dataLength; i++) {
+	rawDataJson.add(command.rawData[i]);
+  }
+
+  String out;
+  serializeJson(*doc, out);
+
+  delete doc;
+  return out;
 }
 
 void startBuzzer() {
