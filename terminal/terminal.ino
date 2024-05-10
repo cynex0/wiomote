@@ -154,8 +154,6 @@ bool prevModeBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
-void decideBltConnectionIcon();
-
 // Motor variables
 const int vibDuration = 200;
 unsigned long lastVibrated = 0;
@@ -165,6 +163,22 @@ bool isVibrating = false;
 const int buzzDuration = 400;
 unsigned long lastBuzzed = 0;
 bool isBuzzing = false;
+
+void decideBltConnectionIcon(){
+  // decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode) return;
+  if(bleDeviceConnected){
+    if(bltConnectedPrevVal == true){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }else{
+    if(bltConnectedPrevVal == false){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }
+}
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -378,7 +392,7 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
-	decideWiFiConnectionIcon();
+  decideWiFiConnectionIcon();
     wifiConnectedPrevVal = true;
 
     updateMQTT();
@@ -394,7 +408,7 @@ void updateNetwork() {
 
       wifiDeviceConnected = CONNECTING;
 
-	  decideWiFiConnectionIcon();
+    decideWiFiConnectionIcon();
       wifiConnectedPrevVal = false;
 
       WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
@@ -454,7 +468,7 @@ JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const C
 
   JsonArray rawDataJson = commandObj.createNestedArray("rawData");
   for (uint8_t i = 0; i < command.dataLength; i++) {
-	rawDataJson.add(command.rawData[i]);
+  rawDataJson.add(command.rawData[i]);
   }
 
   return doc;
@@ -530,9 +544,9 @@ void drawEmitSignal() {  // Draw circles for outgoing signal
 void drawRemote(){
   if (receiveMode) {
     tft.fillScreen(INVERTED_BG_COLOR);
-	  tft.setTextColor(INVERTED_TEXT_COLOR);
+    tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
-	  tft.drawString(F("Recording IR"), CENTER_X, CENTER_Y);
+    tft.drawString(F("Recording IR"), CENTER_X, CENTER_Y);
   } else {
     // Screen background
     tft.fillScreen(DEFAULT_BG_COLOR);
@@ -611,23 +625,6 @@ void drawWiFiConnectionIcon(){
   tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
 }
 
-void decideBltConnectionIcon(){
-	// decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode) return;
-  if(bleDeviceConnected){
-    if(bltConnectedPrevVal == true){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(); // if different - draw the icon
-  }else{
-    if(bltConnectedPrevVal == false){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(); // if different - draw the icon
-  }
-}
-
-
 void drawBltConnectionIcon(){
   // decide the color according to connection status
   uint32_t color;
@@ -649,8 +646,8 @@ void drawBltConnectionIcon(){
 }
 
 void emitData(const Command& command){
-	if (command.rawData != nullptr){
-		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
+  if (command.rawData != nullptr){
+    emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
     drawEmitSignal();
 
     #ifdef DEBUG_LOG
@@ -666,7 +663,7 @@ void emitData(const Command& command){
 
       Serial.println(F("}"));
     #endif
-	}
+  }
 }
 
 void switchMode(){
@@ -677,33 +674,33 @@ void switchMode(){
 }
 
 bool canMapButtons() {
-	for (uint8_t i = 0; i < BTN_COUNT; i++) {
+  for (uint8_t i = 0; i < BTN_COUNT; i++) {
     if (commandMap[i].dataLength == 0) {
       return true;
     }
   }
 
-	return false;
+  return false;
 }
 
 void receive(){
-	if (!canMapButtons()) {
-		switchMode();
+  if (!canMapButtons()) {
+    switchMode();
 
-		return;
-	}
+    return;
+  }
 
-	receiver.enableIRIn();
+  receiver.enableIRIn();
 
-	if (receiver.getResults()){
-		const uint8_t dataLength = recvGlobal.recvLength;
-		uint16_t *rawData = new uint16_t[dataLength];
+  if (receiver.getResults()){
+    const uint8_t dataLength = recvGlobal.recvLength;
+    uint16_t *rawData = new uint16_t[dataLength];
     
-		for (uint8_t i = 1; i < dataLength; i++) {
-			rawData[i - 1] = recvGlobal.recvBuffer[i];
-		}
+    for (uint8_t i = 1; i < dataLength; i++) {
+      rawData[i - 1] = recvGlobal.recvBuffer[i];
+    }
 
-		rawData[dataLength - 1] = 1000; // Arbitrary trailing space
+    rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     const Command recCommand = {rawData, dataLength};
     drawReceiveSignal();
     
@@ -717,14 +714,14 @@ void receive(){
       chosenButton = getButtonPressed();
 
       if (digitalRead(MODE_BTN) == LOW){
-			  switchMode();
-		  } else {
+        switchMode();
+      } else {
         commandMap[chosenButton] = recCommand; // Write the received command to the map
       }
     } while(chosenButton == -1); // Wait for a button press
 
     drawRemote();
-	}
+  }
 }
 
 void setup() {
@@ -736,23 +733,23 @@ void setup() {
   setupBLE();
   
   // Set up pins
-	pinMode(PRESS_BTN, INPUT_PULLUP);
-	pinMode(UP_BTN, INPUT_PULLUP);
+  pinMode(PRESS_BTN, INPUT_PULLUP);
+  pinMode(UP_BTN, INPUT_PULLUP);
   pinMode(DOWN_BTN, INPUT_PULLUP);
   pinMode(LEFT_BTN, INPUT_PULLUP);
   pinMode(RIGHT_BTN, INPUT_PULLUP);
-	pinMode(WIO_KEY_A, INPUT_PULLUP);
-	pinMode(WIO_KEY_B, INPUT_PULLUP);
-	pinMode(WIO_KEY_C, INPUT_PULLUP);
+  pinMode(WIO_KEY_A, INPUT_PULLUP);
+  pinMode(WIO_KEY_B, INPUT_PULLUP);
+  pinMode(WIO_KEY_C, INPUT_PULLUP);
 
-	pinMode(MO_PIN, OUTPUT); 
+  pinMode(MO_PIN, OUTPUT); 
   
   pinMode(BUZZER_PIN, OUTPUT);
 
   // Initialize commands "map"
   for(uint8_t i = 0; i < BTN_COUNT; i++){
     commandMap[i].rawData = new uint16_t[0];
-	  commandMap[i].dataLength = 0;
+    commandMap[i].dataLength = 0;
   }
 
   // Screen setup
@@ -760,7 +757,7 @@ void setup() {
   tft.setRotation(SCREEN_ROTATION);
   tft.setTextDatum(MC_DATUM);
 
-	drawRemote();
+  drawRemote();
 }
 
 void loop() {
@@ -772,21 +769,21 @@ void loop() {
   bool modeBtnState = digitalRead(MODE_BTN);
   if (modeBtnState != prevModeBtnState) {
     if (modeBtnState == HIGH){
-		switchMode();
+    switchMode();
     }
   }
 
     prevModeBtnState = modeBtnState;
 
-	if (receiveMode){
-		receive();
-	} else { // Detecting button presses
+  if (receiveMode){
+    receive();
+  } else { // Detecting button presses
     int pressed = getButtonPressed();
   
     if (pressed != -1) {
       const Command command = commandMap[pressed];
 
-			if (command.dataLength != 0){
+      if (command.dataLength != 0){
         emitData(command);
 
         startVibration(); // Vibrate after data sent
