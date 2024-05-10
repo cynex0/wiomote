@@ -170,8 +170,8 @@ bool isBuzzing = false;
 
 #ifdef DEBUG_CONFIG_CREATOR
 int completedConfigsCount = 0;
-const int configTextsLength = 11;
-char** configTexts = new char*[configTextsLength]{
+const int configTextsLength = 11; // number of config buttons that will be recorded (MAX 11)
+char** configTexts = new char*[configTextsLength]{ // label name for each config command
   "POWER",
   "UP",
   "RIGHT",
@@ -184,7 +184,7 @@ char** configTexts = new char*[configTextsLength]{
   "VOLUME DOWN",
   "MUTE"
 };
-Command *configCommandsList = new Command[configTextsLength];
+Command *configCommandsList = new Command[configTextsLength]; // array to store recorded commands that will be later serialized into one config
 #endif
 
 void decideBltConnectionIcon(){
@@ -460,7 +460,7 @@ int getButtonPressed(){
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
-int convertKeyCodeToApp(const int index) {
+int convertKeyCodeToApp(const int index) { // Converts the index of the button to the app's key code
   if(index > BTN_COUNT - 1) return index - BTN_COUNT;
   return -1 * (index + 1);
 }
@@ -700,14 +700,14 @@ void switchMode(){
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
-void switchConfigMode(){
+void switchConfigMode(){ // Switches between config mode and normal mode
   configMode = !configMode;
-  if(configMode){
-  for(int i = 0; i < configTextsLength; i++){
-    configCommandsList[i].rawData = new uint16_t[0];
-    configCommandsList[i].dataLength = 0;
-  }
-  drawConfigDebug();
+  if(configMode){ // If in config mode
+    for(int i = 0; i < configTextsLength; i++){ // Clear the recorded commands
+      configCommandsList[i].rawData = new uint16_t[0];
+      configCommandsList[i].dataLength = 0;
+    }
+      drawConfigDebug();
   }else{
     receiver.disableIRIn();
     drawRemote();
@@ -773,14 +773,14 @@ void drawConfigDebug(){
   tft.setTextColor(INVERTED_TEXT_COLOR);
   tft.setTextSize(TEXT_SIZE_M);
   for(int i = 0; i < configTextsLength; i++){
-    tft.drawString(configTexts[i], 20, 20 + 20 * i);
+    tft.drawString(configTexts[i], 20, 20 + 20 * i); // Draw the labels for each config button
   }
 }
 
 void receiveConfig(){
   receiver.enableIRIn();
 
-  if (receiver.getResults()){
+  if (receiver.getResults()){ // If a signal is received
     const uint8_t dataLength = recvGlobal.recvLength;
     uint16_t *rawData = new uint16_t[dataLength];
   
@@ -790,20 +790,22 @@ void receiveConfig(){
 
     rawData[dataLength - 1] = 1000; // Arbitrary trailing space
     const Command recCommand = {rawData, dataLength};
-    configCommandsList[completedConfigsCount] = recCommand;
+    configCommandsList[completedConfigsCount] = recCommand; // Save the received command to the list
 
     tft.setTextColor(TFT_DARKGREEN);
-    tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount);
+    tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
+
     completedConfigsCount++;
     drawReceiveSignal();
   }
-  if(completedConfigsCount == configTextsLength){
+  if(completedConfigsCount == configTextsLength){ // If all the config buttons have been recorded
     delay(500);
 
     completedConfigsCount = 0;
 
     switchConfigMode();
 
+    // Serialize the recorded commands into one config
     JsonDocument* doc = new JsonDocument;
     JsonArray commandsArray = doc->to<JsonArray>();
     for(int i = 0; i < configTextsLength; i++){
