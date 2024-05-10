@@ -19,7 +19,7 @@
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
 //#define DEBUG_LOG   // log events to serial
-#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
+//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
@@ -184,6 +184,7 @@ char** configTexts = new char*[configTextsLength]{
   "VOLUME DOWN",
   "MUTE"
 };
+Command *configCommandsList = new Command[configTextsLength];
 #endif
 
 void decideBltConnectionIcon(){
@@ -458,12 +459,13 @@ int getButtonPressed(){
   return out;
 }
 
-/* Expected format (may also contain more keys):
-  {
-    "dataLength":<length>,
-    "rawData":[<byte0>,<byte1>,...]
-  }
-*/
+#ifdef DEBUG_CONFIG_CREATOR
+int convertKeyCodeToApp(const int index) {
+  if(index > BTN_COUNT - 1) return index - BTN_COUNT;
+  return -1 * (index + 1);
+}
+#endif
+
 Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
@@ -701,6 +703,10 @@ void switchMode(){
 void switchConfigMode(){
   configMode = !configMode;
   if(configMode){
+  for(int i = 0; i < configTextsLength; i++){
+    configCommandsList[i].rawData = new uint16_t[0];
+    configCommandsList[i].dataLength = 0;
+  }
   drawConfigDebug();
   }else{
     receiver.disableIRIn();
@@ -775,6 +781,17 @@ void receiveConfig(){
   receiver.enableIRIn();
 
   if (receiver.getResults()){
+    const uint8_t dataLength = recvGlobal.recvLength;
+    uint16_t *rawData = new uint16_t[dataLength];
+  
+    for (uint8_t i = 1; i < dataLength; i++) {
+      rawData[i - 1] = recvGlobal.recvBuffer[i];
+    }
+
+    rawData[dataLength - 1] = 1000; // Arbitrary trailing space
+    const Command recCommand = {rawData, dataLength};
+    configCommandsList[completedConfigsCount] = recCommand;
+
     tft.setTextColor(TFT_DARKGREEN);
     tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount);
     completedConfigsCount++;
@@ -786,6 +803,15 @@ void receiveConfig(){
     completedConfigsCount = 0;
 
     switchConfigMode();
+
+    JsonDocument* doc = new JsonDocument;
+    JsonArray commandsArray = doc->to<JsonArray>();
+    for(int i = 0; i < configTextsLength; i++){
+      commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(i), configTexts[i], configCommandsList[i]));
+    }
+    String out;
+    serializeJson(*doc, out);
+    Serial.println(out);
   }
 }
 #endif
