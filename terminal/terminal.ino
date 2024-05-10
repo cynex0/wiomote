@@ -770,8 +770,23 @@ void drawConfigDebug(){
     tft.drawString(configTexts[i], 20, 20 + 20 * i);
   }
 }
+
 void receiveConfig(){
-  //TODO: implement the method
+  receiver.enableIRIn();
+
+  if (receiver.getResults()){
+    tft.setTextColor(TFT_DARKGREEN);
+    tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount);
+    completedConfigsCount++;
+    drawReceiveSignal();
+  }
+  if(completedConfigsCount == configTextsLength){
+    delay(500);
+
+    completedConfigsCount = 0;
+
+    switchConfigMode();
+  }
 }
 #endif
 
