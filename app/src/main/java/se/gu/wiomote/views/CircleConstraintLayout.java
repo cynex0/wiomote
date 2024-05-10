@@ -4,27 +4,27 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Path;
 import android.util.AttributeSet;
-import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
-public class CircleLinearLayout extends LinearLayout {
+public class CircleConstraintLayout extends ConstraintLayout {
     private Path path;
 
-    public CircleLinearLayout(@NonNull Context context) {
+    public CircleConstraintLayout(@NonNull Context context) {
         super(context);
 
         init();
     }
 
-    public CircleLinearLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public CircleConstraintLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
 
         init();
     }
 
-    public CircleLinearLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public CircleConstraintLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         init();

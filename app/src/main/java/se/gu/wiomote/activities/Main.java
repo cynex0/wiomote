@@ -2,64 +2,46 @@ package se.gu.wiomote.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;  // Handler for timer.
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.activities.remote.Remote;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
-private static final int CONNECTION_TIMEOUT = 5000;
-private Handler handler = new Handler();
-private TextView messageTextView;
-private boolean connectionEstablished = false;
+public class Main extends AppCompatActivity {
+    private static final int CONNECTION_TIMEOUT = 6900;
+    private final Handler handler = new Handler();
 
-@Override
-protected void onCreate(Bundle savedInstanceState) {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.main);
 
-    super.onCreate(savedInstanceState);
-    setContentView(R.layout.main);
+        Runnable runnable = () -> {
 
-    statusTextView = findViewById(R.id.status_text_view);
-    statusTextView.setText("Looking for terminal connection...");
+            startActivity(new Intent(Main.this, Setup.class));
 
-    handler.postDelayed(this::checkConnection, CONNECTION_TIMEOUT);
+            finish();
+        };
 
-}
+        WioMQTTClient.setOnConnectionStatusChangedListener(new WioMQTTClient.OnConnectionStatusChanged() {
+            @Override
+            public void onConnected() {
 
-private void switchToActivity() {
+                startActivity(new Intent(Main.this, Remote.class)); // Move to Remote activity if connection is established.
 
-    if (connectionEstablished) {
+                finish();
 
-        startActivity(new Intent(Main.this, Remote.class));
+                handler.removeCallbacks(runnable);
+            }
 
-    } else {
+            @Override
+            public void onDisconnected() {
+            }
+        });
 
-        startActivity(new Intent(Main.this, Setup.class));
-    }
-}
-
-private void checkConnection() {
-
-    WioMQTTClient.setOnConnectionStatusChangedListener(new WioMQTTClient.OnConnectionStatusChanged() {
-
-        @Override
-        public void onConnected() {
-
-            notificationContainer.setVisibility(View.GONE);
-            switchToActivity(Remote.class);
-            connectionEstablished(true);
-        }
-
-        @Override
-        public void onDisconnected() {
-
-            notification.setText(R.string.connection_lost);
-            notificationContainer.setVisibility(View.VISIBLE);
-            connectionEstablished(false);
-            switchToActivity(Setup.class);
-        }
-    }
-
-    protected void onDestroy(){
-        super.onDestroy();
-        handler.removeCallbacks(null);
+        handler.postDelayed(runnable, CONNECTION_TIMEOUT); // Delay while checking for connection.
     }
 }

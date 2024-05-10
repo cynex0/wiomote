@@ -4,6 +4,7 @@
     <string name="permission">Location</string>
     <string name="network">Network</string>
     <string name="connect">Send network data ↗</string>
+    <string name="connecting">Connecting to the terminal…</string>
     <string name="password">Password</string>
     <string name="waiting">Waiting for terminal…</string>
     <string name="network_connection">Please connect to the Wi-Fi network the terminal should use ↗</string>
@@ -11,6 +12,7 @@
     <string name="bluetooth_connection">Bluetooth needed to connect to the terminal ↗</string>
     <string name="location">Location needed to connect the terminal ↗</string>
     <string name="connection_lost">Terminal not connected</string>
+    <string name="go_to_setup">Connection lost. Go to Setup ↗</string>
     <string name="configurations">Configurations</string>
     <string name="ok">OK</string>
 </resources>

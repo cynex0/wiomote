@@ -33,6 +33,7 @@
 
         <activity
             android:name=".activities.remote.Remote"
+            android:screenOrientation="portrait"
             android:exported="true"
             android:windowSoftInputMode="adjustPan" />
     </application>

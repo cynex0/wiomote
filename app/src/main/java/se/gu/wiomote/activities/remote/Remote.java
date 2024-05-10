@@ -67,4 +67,9 @@ public class Remote extends NotificationTrayActivity {
         SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
         snapHelper.attachToRecyclerView(recyclerView);
     }
+
+    @Override
+    public int getStringResourceId() {
+        return R.string.go_to_setup;
+    }
 }
