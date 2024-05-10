@@ -432,8 +432,8 @@ Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
   
-  const uint8_t dataLength = (*doc)["dataLength"];
-  JsonArray rawDataJson = (*doc)["rawData"];
+  const uint8_t dataLength = (*doc)["command"]["dataLength"];
+  JsonArray rawDataJson = (*doc)["command"]["rawData"];
 
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
@@ -442,6 +442,22 @@ Command deserializeCommand(const char* jsonString) {
 
   delete doc;
   return {rawData, dataLength};
+}
+
+JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const Command& command) {
+  JsonDocument doc;
+  JsonObject commandObj = doc.createNestedObject("command");
+
+  doc["keyCode"] = keyCode;
+  commandObj["label"] = label;
+  commandObj["dataLength"] = command.dataLength;
+
+  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
+  for (uint8_t i = 0; i < command.dataLength; i++) {
+	rawDataJson.add(command.rawData[i]);
+  }
+
+  return doc;
 }
 
 void startBuzzer() {
@@ -655,9 +671,9 @@ void emitData(const Command& command){
 
 void switchMode(){
   receiveMode = !receiveMode;
-  
+
   startBuzzer();
-	drawRemote();
+  drawRemote();
 }
 
 bool canMapButtons() {
@@ -756,11 +772,11 @@ void loop() {
   bool modeBtnState = digitalRead(MODE_BTN);
   if (modeBtnState != prevModeBtnState) {
     if (modeBtnState == HIGH){
-		  switchMode();
+		switchMode();
     }
   }
 
-  prevModeBtnState = modeBtnState;
+    prevModeBtnState = modeBtnState;
 
 	if (receiveMode){
 		receive();
