@@ -188,7 +188,7 @@ char** configTexts = new char*[configTextsLength]{
 
 void decideBltConnectionIcon(){
   // decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode) return;
+  if(receiveMode || configMode) return;
   if(bleDeviceConnected){
     if(bltConnectedPrevVal == true){
       return; // if the bluetooth connection status is the same as before - do nothing
@@ -612,7 +612,7 @@ void drawRemote(){
 
 void decideWiFiConnectionIcon(){
   // decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode) return;
+  if(receiveMode || configMode) return;
   if(wifiDeviceConnected == CONNECTED){
     if(wifiConnectedPrevVal == true){
       return; // if the wifi connection status is the same as before - do nothing
