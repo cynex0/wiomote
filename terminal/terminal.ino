@@ -19,6 +19,7 @@
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
 //#define DEBUG_LOG   // log events to serial
+#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
@@ -80,6 +81,7 @@
 #define PRESS_BTN  WIO_5S_PRESS
 #define POWER_BTN     WIO_KEY_C
 #define MODE_BTN      WIO_KEY_A
+#define CONFIG_REC_BTN   WIO_KEY_B
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -163,6 +165,21 @@ bool isVibrating = false;
 const int buzzDuration = 400;
 unsigned long lastBuzzed = 0;
 bool isBuzzing = false;
+
+const int configTextsLength = 11;
+char** configTexts = new char*[configTextsLength]{
+  "POWER",
+  "UP",
+  "RIGHT",
+  "DOWN",
+  "LEFT",
+  "PRESS",
+  "CHANNEL UP",
+  "CHANNEL DOWN",
+  "VOLUME UP",
+  "VOLUME DOWN",
+  "MUTE"
+};
 
 void decideBltConnectionIcon(){
   // decide the color according to connection status and previous status so it doesn't loop
@@ -668,7 +685,9 @@ void emitData(const Command& command){
 
 void switchMode(){
   receiveMode = !receiveMode;
-
+  if(!receiveMode){
+    receiver.disableIRIn();
+  }
   startBuzzer();
   drawRemote();
 }
@@ -721,6 +740,15 @@ void receive(){
     } while(chosenButton == -1); // Wait for a button press
 
     drawRemote();
+  }
+}
+
+void drawConfigDebug(){
+  tft.fillScreen(INVERTED_BG_COLOR);
+  tft.setTextColor(INVERTED_TEXT_COLOR);
+  tft.setTextSize(TEXT_SIZE_M);
+  for(int i = 0; i < configTextsLength; i++){
+    tft.drawString(configTexts[i], 20, 20 + 20 * i);
   }
 }
 
