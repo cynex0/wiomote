@@ -8,8 +8,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import se.gu.wiomote.utils.CustomCommandJson;
 
 public class Configuration {
     private static final String TAG = "Configuration";
@@ -28,7 +32,7 @@ public class Configuration {
     }
 
     public Configuration(String uuid, String name) {
-        this(uuid, name, new HashMap<>());
+        this(uuid, name, new LinkedHashMap<>());
     }
 
     public Configuration(String uuid) {
@@ -70,7 +74,7 @@ public class Configuration {
     public static Map<Integer, Command> deserializeCommands(String jsonString) {
         try {
             JSONArray array = new JSONArray(jsonString);
-            Map<Integer, Command> map = new HashMap<>();
+            Map<Integer, Command> map = new LinkedHashMap<>();
 
             for (int index = 0; index < array.length(); index++) {
                 try {
@@ -147,5 +151,16 @@ public class Configuration {
         builder.append("]");
 
         return builder.toString();
+    }
+
+    public List<CustomCommandJson> getCustomCommands() {
+        List<CustomCommandJson> customCommands = new ArrayList<>();
+        for (Map.Entry<Integer,Command> entry : commands.entrySet()) {
+            if (entry.getKey() >= 0) {
+                Command command = entry.getValue();
+                customCommands.add(new CustomCommandJson(command.label, serializeCommand(entry.getKey(), true)));
+            }
+        }
+        return customCommands;
     }
 }

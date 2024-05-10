@@ -11,17 +11,28 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import se.gu.wiomote.R;
 import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
+import se.gu.wiomote.utils.CustomCommandJson;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
     private static final int ADD_BUTTON = 1;
     private static final int CUSTOM_BUTTON = 2;
     private final Activity activity;
+    private final List<CustomCommandJson> customCommands;
 
     public RemoteRecyclerAdapter(Activity activity) {
         this.activity = activity;
+        this.customCommands = new ArrayList<>();
+    }
+
+    public RemoteRecyclerAdapter(Activity activity, List<CustomCommandJson> customCommands) {
+        this.activity = activity;
+        this.customCommands = customCommands;
     }
 
     @NonNull
@@ -52,11 +63,10 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         if (holder.viewType == CUSTOM_BUTTON) {
-            holder.label.setText("Button " + (position + 1));
+            holder.label.setText(customCommands.get(position).label);
 
             holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                    new Command("Button " + (position + 1),
-                            new int[]{(position + 1) * 100}).serialize().getBytes()));
+                    customCommands.get(position).commandJson.getBytes()));
         }
     }
 
@@ -67,7 +77,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
     @Override
     public int getItemCount() {
-        return 5;
+        return customCommands.size() + 1;
     }
 
     protected static class ViewHolder extends RecyclerView.ViewHolder {

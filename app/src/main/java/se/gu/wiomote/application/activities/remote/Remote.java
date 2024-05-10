@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.SnapHelper;
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import se.gu.wiomote.R;
@@ -23,6 +24,7 @@ import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
+import se.gu.wiomote.utils.CustomCommandJson;
 
 public class Remote extends DatabaseAccessActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
@@ -86,14 +88,16 @@ public class Remote extends DatabaseAccessActivity {
                     });
                 }
             }
+
+            if (config != null) {
+                recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
+                        LinearLayoutManager.HORIZONTAL, false));
+                recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                recyclerView.setAdapter(new RemoteRecyclerAdapter(this, config.getCustomCommands()));
+
+                SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
+                snapHelper.attachToRecyclerView(recyclerView);
+            }
         }
-
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
-                LinearLayoutManager.HORIZONTAL, false));
-        recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        recyclerView.setAdapter(new RemoteRecyclerAdapter(this));
-
-        SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
-        snapHelper.attachToRecyclerView(recyclerView);
     }
 }
