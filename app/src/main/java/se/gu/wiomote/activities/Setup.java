@@ -42,8 +42,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import se.gu.wiomote.R;
+import se.gu.wiomote.activities.remote.Remote;
 import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.network.WioBluetoothGattCallback;
+import se.gu.wiomote.network.mqtt.WioMQTTClient;
 import se.gu.wiomote.views.ListeningButton;
 
 public class Setup extends NotificationTrayActivity {
@@ -163,6 +165,9 @@ public class Setup extends NotificationTrayActivity {
                                 json.put(PASSWORD, password.getText());
 
                                 gattWrapper.sendData(json.toString());
+
+                                send.setEnabled(false);
+                                send.setText(R.string.connecting);
                             } catch (JSONException exception) {
                                 Log.e(TAG, "onConnect: ", exception);
                             }
@@ -308,6 +313,29 @@ public class Setup extends NotificationTrayActivity {
                 bluetoothButton.setEnabled(true);
             }
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        setOnConnectionStatusChangeListener(new WioMQTTClient.OnConnectionStatusChanged() {
+            @Override
+            public void onConnected() {
+                startActivity(new Intent(Setup.this, Remote.class));
+
+                finish();
+            }
+
+            @Override
+            public void onDisconnected() {
+            }
+        });
+    }
+
+    @Override
+    public int getStringResourceId() {
+        return R.string.connection_lost;
     }
 
     @Override

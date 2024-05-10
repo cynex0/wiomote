@@ -4,27 +4,27 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Path;
 import android.util.AttributeSet;
-import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
-public class CircleLinearLayout extends LinearLayout {
+public class CircleConstraintLayout extends ConstraintLayout {
     private Path path;
 
-    public CircleLinearLayout(@NonNull Context context) {
+    public CircleConstraintLayout(@NonNull Context context) {
         super(context);
 
         init();
     }
 
-    public CircleLinearLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
+    public CircleConstraintLayout(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
 
         init();
     }
 
-    public CircleLinearLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public CircleConstraintLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         init();
@@ -38,17 +38,18 @@ public class CircleLinearLayout extends LinearLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        if (getMeasuredHeight() != getMeasuredWidth()) {
-            int size = Math.min(getMeasuredHeight(), getMeasuredWidth());
-
-            getLayoutParams().height = size;
-            getLayoutParams().width = size;
-
-            path.reset();
-            path.addOval(0, 0, size, size, Path.Direction.CW);
-
-            invalidate();
+        if(getMeasuredWidth() > getMeasuredHeight()) {
+            super.onMeasure(heightMeasureSpec, heightMeasureSpec);
+        } else {
+            super.onMeasure(widthMeasureSpec, widthMeasureSpec);
         }
+
+        int size = Math.min(getMeasuredHeight(), getMeasuredWidth());
+
+        path.reset();
+        path.addOval(0, 0, size, size, Path.Direction.CW);
+
+        invalidate();
     }
 
     @Override
