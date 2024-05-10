@@ -19,7 +19,7 @@
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
 //#define DEBUG_LOG   // log events to serial
-//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
+#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
@@ -81,7 +81,8 @@
 #define PRESS_BTN  WIO_5S_PRESS
 #define POWER_BTN     WIO_KEY_C
 #define MODE_BTN      WIO_KEY_A
-#define CONFIG_REC_BTN   WIO_KEY_B
+#define CONFIG_REC_BTN  WIO_KEY_B
+#define CONFIG_SKIP_BTN WIO_KEY_C
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -155,6 +156,7 @@ bool receiveMode = false;
 bool configMode = false;
 bool prevModeBtnState = HIGH;
 bool prevConfigBtnState = HIGH;
+bool prevConfigSkipBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
@@ -779,7 +781,19 @@ void drawConfigDebug(){
 
 void receiveConfig(){
   receiver.enableIRIn();
-
+  
+  // logic for skipping a command
+  if(digitalRead(CONFIG_SKIP_BTN) != prevConfigSkipBtnState){
+	  if(digitalRead(CONFIG_SKIP_BTN) == LOW){
+      tft.setTextColor(TFT_RED);
+      tft.drawString(F("SKIPPED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
+      const uint8_t dataLength = 0;
+      uint16_t *rawData = new uint16_t[dataLength];
+      completedConfigsCount++;
+    }
+  }
+  prevConfigSkipBtnState = digitalRead(CONFIG_SKIP_BTN);
+  
   if (receiver.getResults()){ // If a signal is received
     const uint8_t dataLength = recvGlobal.recvLength;
     uint16_t *rawData = new uint16_t[dataLength];
@@ -802,14 +816,21 @@ void receiveConfig(){
     delay(500);
 
     completedConfigsCount = 0;
+	  int appsConfigBtnCount = BTN_COUNT; // Start from the first app button
 
     switchConfigMode();
 
     // Serialize the recorded commands into one config
     JsonDocument* doc = new JsonDocument;
     JsonArray commandsArray = doc->to<JsonArray>();
-    for(int i = 0; i < configTextsLength; i++){
-      commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(i), configTexts[i], configCommandsList[i]));
+    for(int i = 0; i < configTextsLength; i++){ // Loop through the recorded commands
+      if(configCommandsList[i].dataLength == 0) continue; // Skip if no command was recorded (skipped button)
+      if(i > BTN_COUNT - 1) { // If the button is an app button
+        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(appsConfigBtnCount), configTexts[i], configCommandsList[i]));
+        appsConfigBtnCount++;
+      } else {
+        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(i), configTexts[i], configCommandsList[i]));
+      }
     }
     String out;
     serializeJson(*doc, out);
