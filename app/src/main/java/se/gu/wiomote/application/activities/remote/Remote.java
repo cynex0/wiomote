@@ -1,5 +1,6 @@
 package se.gu.wiomote.application.activities.remote;
 
+import android.database.Cursor;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
@@ -17,8 +18,10 @@ import java.util.Map;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
+import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
+import se.gu.wiomote.configurations.Database;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class Remote extends DatabaseAccessActivity {
@@ -31,13 +34,6 @@ public class Remote extends DatabaseAccessActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.remote);
 
-        Configuration config = Configuration.deserializeJSON(getDatabase()
-                .get(ConfigurationType.TV, "6c78c5f1-432a-4642-8de1-db2dc332506e"));
-
-        if (config == null) {
-            Log.e(TAG, "Could not load configuration");
-        }
-
         RecyclerView recyclerView = findViewById(R.id.recycler);
         View power = findViewById(R.id.power);
         View ok = findViewById(R.id.ok);
@@ -46,27 +42,49 @@ public class Remote extends DatabaseAccessActivity {
         View down = findViewById(R.id.down);
         View right = findViewById(R.id.right);
 
-        basicButtonMap.put(-1, power);
-        basicButtonMap.put(-2, up);
-        basicButtonMap.put(-3, right);
-        basicButtonMap.put(-4, down);
-        basicButtonMap.put(-5, left);
-        basicButtonMap.put(-6, ok);
+        Cursor cursor = getDatabase().get(ConfigurationType.TV, "6c78c5f1-432a-4642-8de1-db2dc332506e");
 
-        WioMQTTClient.setCommandReceivedListener(payload -> {
-            if (config != null) {
-                config.addCommandFromJSON(new String(payload.getPayloadAsBytes()));
+        if (cursor != null) {
+            String uuid = Database.getColumn(cursor, Database.Columns.UUID);
+            String name = Database.getColumn(cursor, Database.Columns.NAME);
+            Map<Integer, Command> commands = Configuration.deserializeCommands(
+                    Database.getColumn(cursor, Database.Columns.COMMANDS)
+            );
+
+            cursor.close();
+
+            Configuration config;
+
+            if (uuid == null || uuid.isEmpty() || commands == null) {
+                config = null;
+
+                Log.e(TAG, "Could not load configuration");
+            } else {
+                config = new Configuration(uuid, name, commands);
             }
-        });
 
-        for (Map.Entry<Integer,View> entry : basicButtonMap.entrySet()) {
-            View button = entry.getValue();
+            basicButtonMap.put(-1, power);
+            basicButtonMap.put(-2, up);
+            basicButtonMap.put(-3, right);
+            basicButtonMap.put(-4, down);
+            basicButtonMap.put(-5, left);
+            basicButtonMap.put(-6, ok);
 
-            if (config != null) {
-                button.setOnClickListener(v -> {
-                    WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                            config.serializeCommand(entry.getKey()).getBytes());
-                });
+            WioMQTTClient.setCommandReceivedListener(payload -> {
+                if (config != null) {
+                    config.addCommand(new String(payload.getPayloadAsBytes()));
+                }
+            });
+
+            for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
+                View button = entry.getValue();
+
+                if (config != null) {
+                    button.setOnClickListener(v -> {
+                        WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
+                                config.serializeCommand(entry.getKey(), true).getBytes());
+                    });
+                }
             }
         }
 

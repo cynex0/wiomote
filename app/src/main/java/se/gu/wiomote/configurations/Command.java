@@ -6,15 +6,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.Serializable;
 import java.util.Arrays;
 
-public class Command implements Serializable {
+public class Command {
     private static final String TAG = "Command";
     private static final String LABEL_KEY = "label";
     private static final String LENGTH_KEY = "dataLength";
     private static final String DATA_KEY = "rawData";
-    private static final String COMMAND_KEY = "command";
     private final int[] rawData;
     public String label;
 
@@ -23,11 +21,6 @@ public class Command implements Serializable {
         this.rawData = rawData;
     }
 
-    public int[] getRawData() {
-        return rawData;
-    }
-
-
     /* JSON Format (prettified):
     {
       "label" : "...",              // can be omitted when sending to the terminal
@@ -35,7 +28,7 @@ public class Command implements Serializable {
       "rawData" : [ <byte0>, ...]
     }
     */
-    public String serializeJSON(boolean omitLabel) {
+    public String serialize(boolean omitLabel) {
         StringBuilder builder = new StringBuilder();
 
         builder.append("{");
@@ -50,8 +43,8 @@ public class Command implements Serializable {
         return builder.toString();
     }
 
-    public String serializeJSON() {
-        return serializeJSON(false);
+    public String serialize() {
+        return serialize(false);
     }
 
     /* Expected format (may contain more fields):
@@ -60,7 +53,7 @@ public class Command implements Serializable {
       "rawData" : [ <byte0>, ...]
     }
     */
-    public static Command deserializeJSON(JSONObject jsonObject) throws JSONException {
+    public static Command deserialize(JSONObject jsonObject) throws JSONException {
         JSONArray bytesJSON = jsonObject.getJSONArray(DATA_KEY);
         int[] bytes = new int[bytesJSON.length()];
 
@@ -71,11 +64,11 @@ public class Command implements Serializable {
         return new Command(jsonObject.getString(LABEL_KEY), bytes);
     }
 
-    public static Command deserializeJSON(String jsonString) {
+    public static Command deserialize(String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
 
-            return deserializeJSON(jsonObject);
+            return deserialize(jsonObject);
         } catch (JSONException exception) {
             Log.e(TAG, "deserialize: Malformed command.");
 

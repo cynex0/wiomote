@@ -5,6 +5,12 @@ import se.gu.wiomote.configurations.Database;
 
 public class DatabaseAccessActivity extends NotificationTrayActivity {
     public Database getDatabase() {
-        return ((WIOmote) getApplicationContext()).database;
+        WIOmote app = ((WIOmote) getApplicationContext());
+
+        if (app.database == null || !app.database.isOpen()) {
+            app.database = new Database(app);
+        }
+
+        return app.database;
     }
 }

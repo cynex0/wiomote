@@ -1,17 +1,17 @@
 package se.gu.wiomote.configurations;
 
+import static se.gu.wiomote.configurations.Database.Columns.COMMANDS;
+import static se.gu.wiomote.configurations.Database.Columns.NAME;
+import static se.gu.wiomote.configurations.Database.Columns.UUID;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.util.Log;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import androidx.annotation.NonNull;
+
+import com.readystatesoftware.sqliteasset.SQLiteAssetHelper;
 
 public class Database {
     private final Helper helper;
@@ -22,23 +22,38 @@ public class Database {
         this.database = helper.getWritableDatabase();
     }
 
-    public void close() {
-        helper.close();
+    public boolean isOpen() {
+        return database.isOpen();
     }
 
-    public void insert(ConfigurationType type, String uuid, String json) {
+    public void close() {
+        if (isOpen()) {
+            helper.close();
+        }
+    }
+
+    public void insert(ConfigurationType type, Configuration configuration) {
         ContentValues contentValue = new ContentValues();
-        contentValue.put(Helper.UUID, uuid);
-        contentValue.put(Helper.JSON, json);
+        contentValue.put(UUID.string, configuration.getUUID());
+        contentValue.put(Columns.NAME.string, configuration.name);
+        contentValue.put(COMMANDS.string, configuration.serializeConfig());
 
         database.insert(type.getTableName(), null, contentValue);
     }
 
-    public Cursor get(ConfigurationType type) {
-        String[] columns = new String[]{Helper.UUID, Helper.JSON};
+    public Cursor getAll(ConfigurationType type, Columns... databaseColumns) {
+        String[] columns = null;
+
+        if (databaseColumns.length > 0) {
+            columns = new String[databaseColumns.length];
+
+            for (int index = 0; index < columns.length; index++) {
+                columns[index] = databaseColumns[index].string;
+            }
+        }
 
         Cursor cursor = database.query(type.getTableName(), columns,
-                null, null, null, null, null);
+                null, null, null, null, NAME + " ASC");
 
         if (cursor != null) {
             cursor.moveToFirst();
@@ -47,125 +62,78 @@ public class Database {
         return cursor;
     }
 
-    public String get(ConfigurationType type, String uuid) {
-        String[] columns = new String[]{Helper.UUID, Helper.JSON};
+    public Cursor get(ConfigurationType type, String uuid, Columns... databaseColumns) {
+        String[] columns = new String[]{UUID.string, NAME.string, COMMANDS.string};
 
-        Cursor cursor = database.query(type.getTableName(), columns, Helper.UUID + "=?",
+        if (databaseColumns.length > 0) {
+            columns = new String[databaseColumns.length];
+
+            for (int index = 0; index < columns.length; index++) {
+                columns[index] = databaseColumns[index].string;
+            }
+        }
+
+        Cursor cursor = database.query(type.getTableName(), columns, UUID + "=?",
                 new String[]{uuid}, null, null, null);
 
         if (cursor != null) {
             cursor.moveToFirst();
+        }
 
-            int index = cursor.getColumnIndex(Helper.JSON);
+        return cursor;
+    }
 
-            if (index >= 0 && cursor.getCount() > 0) {
-                String json = cursor.getString(index);
+    public boolean update(ConfigurationType type, Configuration configuration) {
+        ContentValues contentValues = new ContentValues();
 
-                cursor.close();
+        contentValues.put(NAME.string, configuration.name);
+        contentValues.put(COMMANDS.string, configuration.serializeConfig());
 
-                return json;
-            } else {
-                cursor.close();
+        return database.update(type.getTableName(), contentValues,
+                UUID + "=?", new String[]{configuration.getUUID()}) > 0;
+    }
+
+    public void remove(ConfigurationType type, String uuid) {
+        database.delete(type.getTableName(), UUID + "=?",
+                new String[]{uuid});
+    }
+
+    public static String getColumn(Cursor cursor, Columns column) {
+        if (cursor != null && cursor.getCount() > 0) {
+            int index = cursor.getColumnIndex(column.string);
+
+            if (index >= 0) {
+                return cursor.getString(index);
             }
         }
 
         return null;
     }
 
-    public boolean update(ConfigurationType type, String uuid, String json) {
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(Helper.UUID, uuid);
-        contentValues.put(Helper.JSON, json);
-
-        return database.update(type.getTableName(), contentValues,
-                Helper.UUID + "=?", new String[]{uuid}) > 0;
-    }
-
-    public void remove(ConfigurationType type, String uuid) {
-        database.delete(type.getTableName(), Helper.UUID + "=?",
-                new String[]{uuid});
-    }
-
-    private static class Helper extends SQLiteOpenHelper {
-        private static final String DB_NAME = "WIOMOTE";
+    private static class Helper extends SQLiteAssetHelper {
+        private static final String DB_NAME = "WIOMOTE.db";
         private static final int DB_VERSION = 1;
-        public static final String UUID = "UUID";
-        public static final String JSON = "JSON";
-        private static final String TAG = "DatabaseHelper";
-        private final Context context;
-        private boolean createDatabase;
 
         public Helper(Context context) {
             super(context, DB_NAME, null, DB_VERSION);
+        }
+    }
 
-            this.context = context;
-            this.createDatabase = false;
+    public enum Columns {
+        UUID("UUID"),
+        NAME("NAME"),
+        COMMANDS("COMMANDS");
+
+        private final String string;
+
+        Columns(String string) {
+            this.string = string;
         }
 
+        @NonNull
         @Override
-        public void onCreate(SQLiteDatabase database) {
-            createDatabase = true;
-        }
-
-        @Override
-        public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-            for (ConfigurationType type : ConfigurationType.values()) {
-                database.execSQL("DROP TABLE IF EXISTS " + type.getTableName());
-            }
-
-            onCreate(database);
-        }
-
-        // modification of https://stackoverflow.com/a/29281714
-        @Override
-        public void onOpen(SQLiteDatabase database) {
-            if(createDatabase) {
-                createDatabase = false;
-
-                InputStream inputStream = null;
-                OutputStream outputStream = null;
-
-                try {
-                    inputStream = context.getAssets().open(DB_NAME + ".db");
-                    outputStream = Files.newOutputStream(Paths.get(database.getPath()));
-
-                    byte[] buffer = new byte[1024];
-                    int length;
-
-                    while ((length = inputStream.read(buffer)) > 0) {
-                        Log.i(TAG, "onCreate: " + new String(buffer));
-                        outputStream.write(buffer, 0, length);
-                    }
-
-                    outputStream.flush();
-
-                    SQLiteDatabase copiedDatabase = context.openOrCreateDatabase(DB_NAME, Context.MODE_PRIVATE, null);
-
-                    copiedDatabase.execSQL("PRAGMA user_version = " + DB_VERSION);
-                    copiedDatabase.close();
-                } catch (IOException exception) {
-                    for (ConfigurationType type : ConfigurationType.values()) {
-                        database.execSQL("CREATE TABLE " + type.getTableName() + "(" +
-                                UUID + " VARCHAR(36)," +
-                                JSON + " MEDIUMTEXT" +
-                                ")"
-                        );
-                    }
-                } finally {
-                    try {
-                        if (outputStream != null) {
-                            outputStream.flush();
-                            outputStream.close();
-                        }
-
-                        if (inputStream != null) {
-                            inputStream.close();
-                        }
-                    } catch (IOException exception) {
-                        Log.e(TAG, "onCreate: Exception closing streams.");
-                    }
-                }
-            }
+        public String toString() {
+            return string;
         }
     }
 }

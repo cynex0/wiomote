@@ -13,8 +13,6 @@ import java.util.Map;
 
 public class Configuration {
     private static final String TAG = "Configuration";
-    private static final String UUID_KEY = "uuid";
-    private static final String NAME_KEY = "name";
     private static final String COMMANDS_KEY = "commands";
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
@@ -22,15 +20,11 @@ public class Configuration {
     private final Map<Integer, Command> commands;
     public String name;
 
-    private Configuration(String uuid, @NonNull String name,
+    public Configuration(String uuid, String name,
                           @NonNull Map<Integer, Command> commands) {
         this.uuid = uuid;
         this.name = name;
         this.commands = commands;
-    }
-
-    private Configuration(String uuid, @NonNull String name, @NonNull JSONArray commands) {
-        this(uuid, name, toCommandMap(commands));
     }
 
     public Configuration(String uuid, String name) {
@@ -45,84 +39,51 @@ public class Configuration {
         return uuid;
     }
 
-    public Command getCommandForKeyCode(int keyCode) {
-        return commands.getOrDefault(keyCode, null);
-    }
-
+    /**
+     * Add command to command map from existing {@link Command} instance
+     */
     public void addCommand(int keyCode, Command command) {
         commands.put(keyCode, command);
     }
 
-    public void addCommandFromJSON(String jsonString) {
+    /**
+     * Add command to command map from existing JSON String instance
+     *
+     * @param jsonString valid JSON object string representation
+     */
+    public void addCommand(@NonNull String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
+
             addCommand(jsonObject.getInt(KEYCODE_KEY),
-                    Command.deserializeJSON(jsonObject.getJSONObject(COMMAND_KEY)));
+                    Command.deserialize(jsonObject.getJSONObject(COMMAND_KEY)));
         } catch (JSONException e) {
             Log.e(TAG, "deserialize: Malformed command.");
-
-            return;
         }
     }
 
-
-    /* JSON Format (prettified):
-    {
-      "uuid" : "...",
-      "name" : "...",
-      "commands" : [
-        {
-          "keyCode" : <number>,
-          "command" :
-            {
-              "label" : "...",
-              "dataLength" : <length>,
-              "rawData" : [ <byte0>, ...]
-            }
-         }
-      ]
-    }
+    /**
+     * Deserialize a list of commands
+     *
+     * @param jsonString valid JSON object string representation
      */
-    public String serializeJSON() {
-        StringBuilder builder = new StringBuilder();
+    public static Map<Integer, Command> deserializeCommands(String jsonString) {
+        try {
+            JSONArray array = new JSONArray(jsonString);
+            Map<Integer, Command> map = new HashMap<>();
 
-        builder.append("{")
-                .append("\"" + UUID_KEY + "\":\"").append(uuid).append("\",") // "uuid":"<uuid>",
-                .append("\"" + NAME_KEY + "\":\"").append(uuid).append("\",") // "name":"<name>",
-                .append("\"" + COMMANDS_KEY + "\":["); // "commands":[
+            for (int index = 0; index < array.length(); index++) {
+                try {
+                    JSONObject entry = array.getJSONObject(index);
 
-        boolean hasAtLeastOneItem = false;
-
-        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
-            Integer keyCode = entry.getKey();
-            Command command = entry.getValue();
-
-            if (hasAtLeastOneItem) {
-                builder.append(",");
+                    map.put(entry.getInt(KEYCODE_KEY),
+                            Command.deserialize((entry.getJSONObject(COMMAND_KEY))));
+                } catch (Exception exception) {
+                    Log.e(TAG, "deserialize: Malformed command - skipping...");
+                }
             }
 
-            builder.append("{")
-                    .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<number>,
-                    .append("\"" + COMMAND_KEY + "\":") // "command":
-                    .append(command.serializeJSON()) // (see Command.java)
-                    .append("}");
-
-            hasAtLeastOneItem = true;
-        }
-
-        builder.append("]}");
-
-        Log.i(TAG, "serializeJSON: " + builder);
-        return builder.toString();
-    }
-
-    public static Configuration deserializeJSON(String jsonString) {
-        try {
-            JSONObject jsonObject = new JSONObject(jsonString);
-
-            return new Configuration(jsonObject.getString(UUID_KEY),
-                    jsonObject.getString(NAME_KEY),
-                    jsonObject.getJSONArray(COMMANDS_KEY));
+            return map;
         } catch (JSONException exception) {
             Log.e(TAG, "deserialize: Malformed configuration.");
         }
@@ -130,42 +91,61 @@ public class Configuration {
         return null;
     }
 
-    /* Reduced JSON format for the terminal:
+    /*
     {
         "keyCode": <keyCode>,
-        "dataLength": <dataLength>,
-        "rawData": [<byte0>, <byte1>, ...]
+        "command": {
+            "label" : "...",              // can be omitted when sending to the terminal
+            "dataLength" : <length>,
+            "rawData" : [ <byte0>, ...]
+        }
     }
     */
-    public String serializeCommand(int keyCode) {
+    public String serializeCommand(int keyCode, boolean omitLabel) {
         StringBuilder builder = new StringBuilder();
-        Command command = getCommandForKeyCode(keyCode);
+        Command command = commands.getOrDefault(keyCode, null);
+
+        if (command == null) {
+            return null;
+        }
 
         builder.append("{")
                 .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<keyCode>,
-                .append("\"" + COMMAND_KEY + "\":");
+                .append("\"" + COMMAND_KEY + "\":") // "command":
+                .append(command.serialize(omitLabel)) // (see Command.java)
+                .append("}");
 
-        if (command == null)
-            command = new Command("EMPTY", new int[0]);
-
-        builder.append(command.serializeJSON(true)).append("}");
         return builder.toString();
     }
 
-    private static Map<Integer, Command> toCommandMap(JSONArray array) {
-        Map<Integer, Command> map = new HashMap<>();
+    public String serializeConfig() {
+        return serializeConfig(false);
+    }
 
-        for (int index = 0; index < array.length(); index++) {
-            try {
-                JSONObject entry = array.getJSONObject(index);
+    public String serializeConfig(boolean omitLabels) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("\"" + COMMANDS_KEY + "\":["); // "commands":[
 
-                map.put(entry.getInt(KEYCODE_KEY),
-                        Command.deserializeJSON((entry.getJSONObject(COMMAND_KEY))));
-            } catch (Exception exception) {
-                Log.e(TAG, "deserialize: Malformed command - skipping...");
+        boolean hasAtLeastOneItem = false;
+
+        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
+            Integer keyCode = entry.getKey();
+
+            String serialCommand = serializeCommand(keyCode, omitLabels);
+
+            if (serialCommand != null) {
+                if (hasAtLeastOneItem) {
+                    builder.append(",");
+                }
+
+                builder.append(serialCommand);
+
+                hasAtLeastOneItem = true;
             }
         }
 
-        return map;
+        builder.append("]");
+
+        return builder.toString();
     }
 }

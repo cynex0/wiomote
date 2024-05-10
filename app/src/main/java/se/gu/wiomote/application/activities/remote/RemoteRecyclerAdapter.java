@@ -56,7 +56,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
             holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                     new Command("Button " + (position + 1),
-                            new int[]{(position + 1) * 100}).serializeJSON().getBytes()));
+                            new int[]{(position + 1) * 100}).serialize().getBytes()));
         }
     }
 
