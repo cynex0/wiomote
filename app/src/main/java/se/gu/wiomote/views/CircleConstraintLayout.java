@@ -38,17 +38,18 @@ public class CircleConstraintLayout extends ConstraintLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        if (getMeasuredHeight() != getMeasuredWidth()) {
-            int size = Math.min(getMeasuredHeight(), getMeasuredWidth());
-
-            getLayoutParams().height = size;
-            getLayoutParams().width = size;
-
-            path.reset();
-            path.addOval(0, 0, size, size, Path.Direction.CW);
-
-            invalidate();
+        if(getMeasuredWidth() > getMeasuredHeight()) {
+            super.onMeasure(heightMeasureSpec, heightMeasureSpec);
+        } else {
+            super.onMeasure(widthMeasureSpec, widthMeasureSpec);
         }
+
+        int size = Math.min(getMeasuredHeight(), getMeasuredWidth());
+
+        path.reset();
+        path.addOval(0, 0, size, size, Path.Direction.CW);
+
+        invalidate();
     }
 
     @Override
