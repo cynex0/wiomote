@@ -152,7 +152,9 @@ unsigned long lastPinged = 0;
 
 // Logic variables
 bool receiveMode = false;
+bool configMode = false;
 bool prevModeBtnState = HIGH;
+bool prevConfigBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
@@ -166,6 +168,8 @@ const int buzzDuration = 400;
 unsigned long lastBuzzed = 0;
 bool isBuzzing = false;
 
+#ifdef DEBUG_CONFIG_CREATOR
+int completedConfigsCount = 0;
 const int configTextsLength = 11;
 char** configTexts = new char*[configTextsLength]{
   "POWER",
@@ -180,6 +184,7 @@ char** configTexts = new char*[configTextsLength]{
   "VOLUME DOWN",
   "MUTE"
 };
+#endif
 
 void decideBltConnectionIcon(){
   // decide the color according to connection status and previous status so it doesn't loop
@@ -692,6 +697,19 @@ void switchMode(){
   drawRemote();
 }
 
+#ifdef DEBUG_CONFIG_CREATOR
+void switchConfigMode(){
+  configMode = !configMode;
+  if(configMode){
+  drawConfigDebug();
+  }else{
+    receiver.disableIRIn();
+    drawRemote();
+  }
+  startBuzzer();
+}
+#endif
+
 bool canMapButtons() {
   for (uint8_t i = 0; i < BTN_COUNT; i++) {
     if (commandMap[i].dataLength == 0) {
@@ -743,6 +761,7 @@ void receive(){
   }
 }
 
+#ifdef DEBUG_CONFIG_CREATOR
 void drawConfigDebug(){
   tft.fillScreen(INVERTED_BG_COLOR);
   tft.setTextColor(INVERTED_TEXT_COLOR);
@@ -751,6 +770,10 @@ void drawConfigDebug(){
     tft.drawString(configTexts[i], 20, 20 + 20 * i);
   }
 }
+void receiveConfig(){
+  //TODO: implement the method
+}
+#endif
 
 void setup() {
   Serial.begin(9600); // Start serial
@@ -795,7 +818,7 @@ void loop() {
 
   // Mode button logic
   bool modeBtnState = digitalRead(MODE_BTN);
-  if (modeBtnState != prevModeBtnState) {
+  if (modeBtnState != prevModeBtnState && !configMode) {
     if (modeBtnState == HIGH){
     switchMode();
     }
@@ -803,9 +826,27 @@ void loop() {
 
     prevModeBtnState = modeBtnState;
 
+  #ifdef DEBUG_CONFIG_CREATOR
+  // Config button logic
+  bool configBtnState = digitalRead(CONFIG_REC_BTN);
+  if (configBtnState != prevConfigBtnState && !receiveMode) {
+  if (configBtnState == HIGH){
+    switchConfigMode();
+    completedConfigsCount = 0;
+  }
+  }
+  prevConfigBtnState = configBtnState;
+  #endif
+
   if (receiveMode){
     receive();
-  } else { // Detecting button presses
+  }
+  #ifdef DEBUG_CONFIG_CREATOR
+  else if (configMode){
+    receiveConfig();
+  } 
+  #endif
+  else { // Detecting button presses
     int pressed = getButtonPressed();
   
     if (pressed != -1) {
