@@ -19,7 +19,7 @@
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
 //#define DEBUG_LOG   // log events to serial
-#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
+//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
