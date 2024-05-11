@@ -11,7 +11,6 @@ import se.gu.wiomote.activities.remote.Remote;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class Main extends AppCompatActivity {
-    private static final int CONNECTION_TIMEOUT = 6900;
     private final Handler handler = new Handler();
 
     @Override
@@ -20,11 +19,12 @@ public class Main extends AppCompatActivity {
         setContentView(R.layout.main);
 
         Runnable runnable = () -> {
-
             startActivity(new Intent(Main.this, Setup.class));
 
             finish();
         };
+
+        handler.postDelayed(runnable, WioMQTTClient.CONNECTION_TIMEOUT); // Delay while checking for connection.
 
         WioMQTTClient.setOnConnectionStatusChangedListener(new WioMQTTClient.OnConnectionStatusChanged() {
             @Override
@@ -41,7 +41,5 @@ public class Main extends AppCompatActivity {
             public void onDisconnected() {
             }
         });
-
-        handler.postDelayed(runnable, CONNECTION_TIMEOUT); // Delay while checking for connection.
     }
 }

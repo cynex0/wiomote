@@ -102,6 +102,10 @@
 #define TOPIC_CONN_IN       "wiomote/connection/app"
 #define TOPIC_APP_COMMAND           "wiomote/ir/app"
 
+#ifdef MQTT_PING
+#define MQTT_PING_INTERVAL 1000
+#endif
+
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
@@ -329,7 +333,7 @@ void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
     #ifdef MQTT_PING
-      if(millis() - lastPinged > 5000) {
+      if(millis() - lastPinged > MQTT_PING_INTERVAL) {
         mqttPublishWithLog(TOPIC_CONN_OUT, "ping");
         lastPinged = millis();
       }
@@ -840,8 +844,10 @@ void receiveConfig(){
 #endif
 
 void setup() {
+  #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) // Serial is only needed if debugging is enabled
   Serial.begin(9600); // Start serial
   while(!Serial); // Wait for serial
+  #endif
 
   setupWiFi();
   setupMQTT();
