@@ -207,7 +207,7 @@ void decideBltConnectionIcon(){
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println("Bluetooth connected");
+        Serial.println(F("Bluetooth connected"));
       #endif
 
       bleDeviceConnected = true;
@@ -217,7 +217,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println("Bluetooth disconnected");
+        Serial.println(F("Bluetooth disconnected"));
       #endif
 
       bleDeviceConnected = false;
@@ -241,8 +241,8 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       wifiDeviceConnected = DISCONNECTED;
 
       #ifdef DEBUG_LOG
-        Serial.println(data);
-        Serial.println("Cleared existing connections");
+        Serial.println(F(data));
+        Serial.println(F("Cleared existing connections"));
       #endif
     }
 };
@@ -294,7 +294,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #ifdef DEBUG_LOG
     Serial.print(F("Message arrived [")); Serial.print(F(topic)); Serial.print(F("] "));
 
-    Serial.println(buff_p);
+    Serial.println(F(buff_p));
   #endif
   #ifdef DEBUG_UI
     drawRemote();
