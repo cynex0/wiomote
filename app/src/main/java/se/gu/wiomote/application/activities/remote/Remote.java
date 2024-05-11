@@ -60,7 +60,7 @@ public class Remote extends DatabaseAccessActivity {
         basicButtonMap.put(-6, ok);
 
         Configuration config;
-        Cursor cursor = getDatabase().get(ConfigurationType.TV, "6c78c5f1-432a-4642-8de1-db2dc332506e");
+        Cursor cursor = getDatabase().get(ConfigurationType.TV, "a76953c5-0f00-4256-970f-cdd509a79224");
 
         if (cursor != null) {
             String uuid = Database.getColumn(cursor, Database.Columns.UUID);

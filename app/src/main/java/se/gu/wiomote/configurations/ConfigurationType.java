@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 
 public enum ConfigurationType {
     TV("TV"),
-    AC("AC"),
     PROJECTOR("PROJECTOR"),
     CUSTOM("CUSTOM");
 
