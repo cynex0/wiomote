@@ -24,6 +24,8 @@ public class Main extends AppCompatActivity {
             finish();
         };
 
+        handler.postDelayed(runnable, WioMQTTClient.CONNECTION_TIMEOUT); // Delay while checking for connection.
+
         WioMQTTClient.setOnConnectionStatusChangedListener(new WioMQTTClient.OnConnectionStatusChanged() {
             @Override
             public void onConnected() {
@@ -39,7 +41,5 @@ public class Main extends AppCompatActivity {
             public void onDisconnected() {
             }
         });
-
-        handler.postDelayed(runnable, WioMQTTClient.CONNECTION_TIMEOUT); // Delay while checking for connection.
     }
 }
