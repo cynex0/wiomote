@@ -65,7 +65,6 @@
 #define TEXT_SIZE_M          2
 #define TEXT_SIZE_S          1
 
-#define ICON_COLOR TFT_LIGHTGREY    // Define color for connection icon
 #define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
 #define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
 
@@ -631,19 +630,12 @@ void decideWiFiConnectionIcon(){
 }
 
 void drawWiFiConnectionIcon(){
-  // decide the color according to connection status
-  uint32_t color;
-  if(wifiDeviceConnected == CONNECTED){
-    color = WIFI_ICON_ICON_COLOR_ON;
-  }else{
-    color = WIFI_ICON_ICON_COLOR_OFF;
-  }
   // empty the region for new icon
   tft.drawRect(WIFI_ICON_CIRCLE_X - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_MAX_RAD * 2, WIFI_ICON_CIRCLE_MAX_RAD * 2, DEFAULT_BG_COLOR);
 
   // draw 3 circles
   for(int i = 0; i < 3; i++){
-    tft.drawCircle(WIFI_ICON_CIRCLE_X, WIFI_ICON_CIRCLE_Y, WIFI_ICON_CIRCLE_MAX_RAD - WIFI_ICON_CIRCLE_RADIUS_DIFF * i, color);
+    tft.drawCircle(WIFI_ICON_CIRCLE_X, WIFI_ICON_CIRCLE_Y, WIFI_ICON_CIRCLE_MAX_RAD - WIFI_ICON_CIRCLE_RADIUS_DIFF * i, wifiDeviceConnected == CONNECTED ? WIFI_ICON_ICON_COLOR_ON : WIFI_ICON_ICON_COLOR_OFF);
   }
 
   // use 2 triangles to mask the 3 circles into 3 arcs
