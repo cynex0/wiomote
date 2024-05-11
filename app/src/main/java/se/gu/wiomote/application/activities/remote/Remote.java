@@ -1,7 +1,9 @@
 package se.gu.wiomote.application.activities.remote;
 
-import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.text.Editable;
@@ -11,6 +13,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -22,11 +25,11 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
+import se.gu.wiomote.application.activities.list.ConfigurationList;
 import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
@@ -35,22 +38,39 @@ import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class Remote extends DatabaseAccessActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
+    private static final String SHARED_PREFERENCES = "RemotePreference";
+    private static final String UUID = "UUID";
+    private static final String TYPE = "TYPE";
     private static final String TAG = "se.gu.wiomote.remote";
+    private static ConfigurationType type = ConfigurationType.TV;
+    private static String uuid = "a76953c5-0f00-4256-970f-cdd509a79224";
+    private static boolean update = false;
     private final Map<Integer, View> basicButtonMap = new HashMap<>();
+    private SharedPreferences preferences;
+    private RecyclerView recyclerView;
+    private TextView label;
 
-    @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.remote);
 
-        RecyclerView recyclerView = findViewById(R.id.recycler);
+        preferences = getSharedPreferences(SHARED_PREFERENCES, Context.MODE_PRIVATE);
+
+        type = ConfigurationType.valueOf(preferences.getString(TYPE, ConfigurationType.TV.toString()));
+        uuid = preferences.getString(UUID, "a76953c5-0f00-4256-970f-cdd509a79224");
+
+        recyclerView = findViewById(R.id.recycler);
+        label = findViewById(R.id.label);
+        TextView configurations = findViewById(R.id.configurations);
         View power = findViewById(R.id.power);
         View ok = findViewById(R.id.ok);
         View up = findViewById(R.id.up);
         View left = findViewById(R.id.left);
         View down = findViewById(R.id.down);
         View right = findViewById(R.id.right);
+
+        configurations.setOnClickListener(v -> startActivity(new Intent(Remote.this, ConfigurationList.class)));
 
         basicButtonMap.put(-1, power);
         basicButtonMap.put(-2, up);
@@ -59,11 +79,14 @@ public class Remote extends DatabaseAccessActivity {
         basicButtonMap.put(-5, left);
         basicButtonMap.put(-6, ok);
 
+        updateLayout();
+    }
+
+    private void updateLayout() {
         Configuration config;
-        Cursor cursor = getDatabase().get(ConfigurationType.TV, "a76953c5-0f00-4256-970f-cdd509a79224");
+        Cursor cursor = getDatabase().get(type, uuid);
 
         if (cursor != null) {
-            String uuid = Database.getColumn(cursor, Database.Columns.UUID);
             String name = Database.getColumn(cursor, Database.Columns.NAME);
             Map<Integer, Command> commands = Configuration.deserializeCommands(
                     Database.getColumn(cursor, Database.Columns.COMMANDS)
@@ -77,9 +100,11 @@ public class Remote extends DatabaseAccessActivity {
                 Log.e(TAG, "Could not load configuration");
             } else {
                 config = new Configuration(uuid, name, commands);
+
+                label.setText(name);
             }
         } else {
-            config = new Configuration(UUID.randomUUID().toString());
+            config = new Configuration(java.util.UUID.randomUUID().toString());
         }
 
         for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
@@ -97,7 +122,7 @@ public class Remote extends DatabaseAccessActivity {
             recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
                     LinearLayoutManager.HORIZONTAL, false));
             recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            adapter = new RemoteRecyclerAdapter(this, config);
+            adapter = new RemoteRecyclerAdapter(this, type, config);
             recyclerView.setAdapter(adapter);
 
             WioMQTTClient.setCommandReceivedListener(payload -> {
@@ -138,8 +163,7 @@ public class Remote extends DatabaseAccessActivity {
                 save.setOnClickListener(v -> {
                     command.label = editText.getText().toString();
 
-                    //TODO generalize
-                    getDatabase().update(ConfigurationType.TV, config);
+                    getDatabase().update(type, config);
 
                     adapter.addCustomCommand(command);
                     adapter.notifyItemInserted(index);
@@ -174,9 +198,40 @@ public class Remote extends DatabaseAccessActivity {
             @Override
             public void onExitedCloningMode() {
                 if (config != null && !config.equals(prevConfig)) {
-                    getDatabase().update(ConfigurationType.TV, config);
+                    getDatabase().update(type, config);
                 }
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        if (update) {
+            updateLayout();
+
+            update = false;
+        }
+
+        super.onResume();
+    }
+
+    @Override
+    protected void onStop() {
+        preferences.edit()
+                .putString(UUID, uuid)
+                .putString(TYPE, type.toString())
+                .apply();
+
+        super.onStop();
+    }
+
+    public static void updateConfiguration(ConfigurationType newType, String newUuid) {
+        if (newType != null && newUuid != null &&
+                (!newType.equals(type) || !newUuid.equals(uuid))) {
+            type = newType;
+            uuid = newUuid;
+
+            update = true;
+        }
     }
 }

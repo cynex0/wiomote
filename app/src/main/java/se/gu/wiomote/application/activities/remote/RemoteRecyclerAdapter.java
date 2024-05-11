@@ -26,13 +26,15 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     private static final int ADD_BUTTON = 1;
     private static final int CUSTOM_BUTTON = 2;
     private final Configuration configuration;
+    private final ConfigurationType type;
     private final List<Command> commands;
     private final Dialog waitingDialog;
     private final Remote activity;
 
-    public RemoteRecyclerAdapter(Remote activity, Configuration configuration) {
+    public RemoteRecyclerAdapter(Remote activity, ConfigurationType type, Configuration configuration) {
         this.activity = activity;
         this.configuration = configuration;
+        this.type = type;
         this.commands = configuration.getCustomCommands();
 
         this.waitingDialog = new MaterialAlertDialogBuilder(activity)
@@ -97,9 +99,8 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                     remove.setOnClickListener(v -> {
                         configuration.removeCommand(position);
 
-                        //TODO generalize
                         activity.getDatabase()
-                                .update(ConfigurationType.TV, configuration);
+                                .update(type, configuration);
 
                         int index = commands.indexOf(command);
 

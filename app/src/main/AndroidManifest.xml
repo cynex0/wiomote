@@ -35,6 +35,11 @@
             android:name=".application.activities.remote.Remote"
             android:exported="true"
             android:windowSoftInputMode="adjustPan" />
+
+        <activity
+            android:name=".application.activities.list.ConfigurationList"
+            android:exported="true"
+            android:windowSoftInputMode="adjustPan" />
     </application>
 
 </manifest>

@@ -3,9 +3,9 @@ package se.gu.wiomote.configurations;
 import androidx.annotation.NonNull;
 
 public enum ConfigurationType {
+    CUSTOM("CUSTOM"),
     TV("TV"),
-    PROJECTOR("PROJECTOR"),
-    CUSTOM("CUSTOM");
+    PROJECTOR("PROJECTOR");
 
     private final String string;
 
