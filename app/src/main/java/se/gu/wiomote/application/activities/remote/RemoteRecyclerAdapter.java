@@ -20,10 +20,11 @@ import se.gu.wiomote.network.mqtt.WioMQTTClient;
 import se.gu.wiomote.utils.CustomCommandJson;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
+    private static final String CUSTOM_BUTTON_REQUEST_TOPIC = "wiomote/mode/requestClone";
     private static final int ADD_BUTTON = 1;
     private static final int CUSTOM_BUTTON = 2;
     private final Activity activity;
-    private final List<CustomCommandJson> customCommands;
+    private List<CustomCommandJson> customCommands;
 
     public RemoteRecyclerAdapter(Activity activity) {
         this.activity = activity;
@@ -68,6 +69,10 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
             holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                     customCommands.get(position).commandJson.getBytes()));
         }
+        else if (holder.viewType == ADD_BUTTON) {
+            holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(CUSTOM_BUTTON_REQUEST_TOPIC,
+                    String.valueOf(customCommands.size()).getBytes()));
+        }
     }
 
     @Override
@@ -78,6 +83,10 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     @Override
     public int getItemCount() {
         return customCommands.size() + 1;
+    }
+
+    public void updateCustomCommands(List<CustomCommandJson> newCommands) {
+        customCommands = newCommands;
     }
 
     protected static class ViewHolder extends RecyclerView.ViewHolder {

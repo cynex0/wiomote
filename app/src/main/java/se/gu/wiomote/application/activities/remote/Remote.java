@@ -1,7 +1,9 @@
 package se.gu.wiomote.application.activities.remote;
 
+import android.annotation.SuppressLint;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -16,6 +18,7 @@ import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
@@ -31,6 +34,7 @@ public class Remote extends DatabaseAccessActivity {
     private static final String TAG = "se.gu.wiomote.remote";
     private final Map<Integer, View> basicButtonMap = new HashMap<>();
 
+    @SuppressLint("NotifyDataSetChanged")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +48,14 @@ public class Remote extends DatabaseAccessActivity {
         View down = findViewById(R.id.down);
         View right = findViewById(R.id.right);
 
+        basicButtonMap.put(-1, power);
+        basicButtonMap.put(-2, up);
+        basicButtonMap.put(-3, right);
+        basicButtonMap.put(-4, down);
+        basicButtonMap.put(-5, left);
+        basicButtonMap.put(-6, ok);
+
+        Configuration config;
         Cursor cursor = getDatabase().get(ConfigurationType.TV, "6c78c5f1-432a-4642-8de1-db2dc332506e");
 
         if (cursor != null) {
@@ -55,8 +67,6 @@ public class Remote extends DatabaseAccessActivity {
 
             cursor.close();
 
-            Configuration config;
-
             if (uuid == null || uuid.isEmpty() || commands == null) {
                 config = null;
 
@@ -64,40 +74,50 @@ public class Remote extends DatabaseAccessActivity {
             } else {
                 config = new Configuration(uuid, name, commands);
             }
+        } else {
+            config = new Configuration(UUID.randomUUID().toString());
+        }
 
-            basicButtonMap.put(-1, power);
-            basicButtonMap.put(-2, up);
-            basicButtonMap.put(-3, right);
-            basicButtonMap.put(-4, down);
-            basicButtonMap.put(-5, left);
-            basicButtonMap.put(-6, ok);
+        WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+            private Configuration prevConfig;
 
-            WioMQTTClient.setCommandReceivedListener(payload -> {
-                if (config != null) {
-                    config.addCommand(new String(payload.getPayloadAsBytes()));
-                }
-            });
-
-            for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
-                View button = entry.getValue();
-
-                if (config != null) {
-                    button.setOnClickListener(v -> {
-                        WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                                config.serializeCommand(entry.getKey(), true).getBytes());
-                    });
+            @Override
+            public void onEnteredCloningMode() {
+                prevConfig = config;
+            }
+            @Override
+            public void onExitedCloningMode() {
+                if (config != null && !config.equals(prevConfig)) {
+                    getDatabase().update(ConfigurationType.TV, config);
+                    Log.i(TAG, "Updated DB.");
                 }
             }
+        });
+
+        for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
+            View button = entry.getValue();
 
             if (config != null) {
-                recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
-                        LinearLayoutManager.HORIZONTAL, false));
-                recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-                recyclerView.setAdapter(new RemoteRecyclerAdapter(this, config.getCustomCommands()));
-
-                SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
-                snapHelper.attachToRecyclerView(recyclerView);
+                button.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
+                        config.serializeCommand(entry.getKey(), true).getBytes()));
             }
+        }
+
+        if (config != null) {
+            recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
+                    LinearLayoutManager.HORIZONTAL, false));
+            recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            RemoteRecyclerAdapter adapter = new RemoteRecyclerAdapter(this, config.getCustomCommands());
+            recyclerView.setAdapter(adapter);
+
+            WioMQTTClient.setCommandReceivedListener(payload -> {
+                config.addCommand(new String(payload.getPayloadAsBytes()));
+                adapter.updateCustomCommands(config.getCustomCommands());
+                adapter.notifyDataSetChanged();
+            });
+
+            SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
+            snapHelper.attachToRecyclerView(recyclerView);
         }
     }
 }

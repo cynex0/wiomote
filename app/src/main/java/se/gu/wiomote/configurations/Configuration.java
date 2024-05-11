@@ -9,6 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,6 @@ import se.gu.wiomote.utils.CustomCommandJson;
 
 public class Configuration {
     private static final String TAG = "Configuration";
-    private static final String COMMANDS_KEY = "commands";
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
     private final String uuid;
@@ -25,7 +25,7 @@ public class Configuration {
     public String name;
 
     public Configuration(String uuid, String name,
-                          @NonNull Map<Integer, Command> commands) {
+                         @NonNull Map<Integer, Command> commands) {
         this.uuid = uuid;
         this.name = name;
         this.commands = commands;
@@ -128,7 +128,7 @@ public class Configuration {
 
     public String serializeConfig(boolean omitLabels) {
         StringBuilder builder = new StringBuilder();
-        builder.append("\"" + COMMANDS_KEY + "\":["); // "commands":[
+        builder.append("[");
 
         boolean hasAtLeastOneItem = false;
 
@@ -155,12 +155,39 @@ public class Configuration {
 
     public List<CustomCommandJson> getCustomCommands() {
         List<CustomCommandJson> customCommands = new ArrayList<>();
-        for (Map.Entry<Integer,Command> entry : commands.entrySet()) {
+        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
             if (entry.getKey() >= 0) {
                 Command command = entry.getValue();
                 customCommands.add(new CustomCommandJson(command.label, serializeCommand(entry.getKey(), true)));
             }
         }
         return customCommands;
+    }
+
+    private boolean commandsEqual(Map<Integer, Command> otherCommands) {
+        if (this.commands.size() != otherCommands.size()) return false;
+
+        Iterator<Map.Entry<Integer, Command>> iterator = commands.entrySet().iterator();
+        Iterator<Map.Entry<Integer, Command>> otherIterator = otherCommands.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Command> entry = iterator.next();
+            Map.Entry<Integer, Command> otherEntry = otherIterator.next();
+
+            if (!entry.equals(otherEntry)) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        if (!(o instanceof Configuration)) return false;
+
+        Configuration other = (Configuration) o;
+
+        return commandsEqual(other.commands) ||
+                name.equals(other.name);
     }
 }

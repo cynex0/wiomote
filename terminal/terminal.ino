@@ -95,10 +95,12 @@
 #define MQTT_PORT                 1883
 #define UUID_PREFIX     "WioTerminal-"
 
-#define TOPIC_CONN_OUT "wiomote/connection/terminal"
-#define TOPIC_CONN_IN       "wiomote/connection/app"
-#define TOPIC_IR_IN                 "wiomote/ir/app"
-#define TOPIC_IR_OUT           "wiomote/ir/terminal"
+#define TOPIC_CONN_OUT  "wiomote/connection/terminal"
+#define TOPIC_CONN_IN        "wiomote/connection/app"
+#define TOPIC_IR_IN                  "wiomote/ir/app"
+#define TOPIC_IR_OUT            "wiomote/ir/terminal"
+#define TOPIC_CURRENT_MODE     "wiomote/mode/current"
+#define TOPIC_SWITCH_MODE "wiomote/mode/requestClone"
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
@@ -155,6 +157,7 @@ bool receiveMode = false;
 bool prevModeBtnState = HIGH;
 int chosenButton = -1; // Button selection in the cloning mode
 bool chosenFromApp = false;
+bool mappingToCustomButton = false;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
@@ -280,6 +283,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       chosenFromApp = true;
     }
   }
+  else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
+    if (!receiveMode) {
+      switchMode();
+    }
+    chosenButton = atoi(buff_p);
+    chosenFromApp = true;
+    mappingToCustomButton = true;
+  }
 }
 
 void setupMQTT() {
@@ -319,6 +330,7 @@ void updateMQTT() {
 
       mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
       mqttClient.subscribe(TOPIC_IR_IN); // topic to receive IR commands from the app
+      mqttClient.subscribe(TOPIC_SWITCH_MODE); // topic to switch to receiveMode when creating custom buttons in the app 
     } else {
       #ifdef DEBUG_LOG
         Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
@@ -433,25 +445,25 @@ int getButtonPressedIndex(){
 const char* getButtonName(const int index) {
   char* out;
   switch(index) {
-      case POWER_BTN_INDEX:
-        out = "POWER"; 
-        break;
-      case UP_BTN_INDEX:
-        out = "UP";
-        break;
-      case RIGHT_BTN_INDEX:
-        out = "RIGHT";
-        break;
-      case DOWN_BTN_INDEX:
-        out = "DOWN";
-        break;
-      case LEFT_BTN_INDEX:
-        out = "LEFT";
-        break;
-      case PRESS_BTN_INDEX:
-        out = "OK";
-        break;
-    }
+    case POWER_BTN_INDEX:
+      out = "POWER"; 
+      break;
+    case UP_BTN_INDEX:
+      out = "UP";
+      break;
+    case RIGHT_BTN_INDEX:
+      out = "RIGHT";
+      break;
+    case DOWN_BTN_INDEX:
+      out = "DOWN";
+      break;
+    case LEFT_BTN_INDEX:
+      out = "LEFT";
+      break;
+    case PRESS_BTN_INDEX:
+      out = "OK";
+      break;
+  }
   return out;
 }
 
@@ -724,9 +736,12 @@ void emitData(const Command& command){
 void switchMode(){
   if (receiveMode) {
     chosenButton = -1; // Forget the chosen button when the user exits cloning mode
+    mappingToCustomButton = false;
     receiver.disableIRIn(); // Disable IR input when exiting cloning mode to prevent reading random signals
   } 
   receiveMode = !receiveMode;
+
+  mqttPublishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
   
   startBuzzer();
 	drawRemote();
@@ -749,16 +764,21 @@ void receive() {
 	}
 
   int pressedButton = getButtonPressedIndex();
-  if ((pressedButton != -1 || chosenFromApp) && pressedButton != chosenButton) {
+  if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
     if(!chosenFromApp) chosenButton = pressedButton;
     tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
+    
     tft.setTextSize(TEXT_SIZE_M);
     char message[16];
-    sprintf(message, "%s selected!", getButtonName(chosenButton));
+    sprintf(message, "%s selected!", mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
     tft.drawString(message, CENTER_X, CENTER_Y);
+    
     tft.setTextSize(TEXT_SIZE_S);
     tft.drawString(F("Waiting for IR."), CENTER_X, CENTER_Y + 20);
+    
+    // Reset logic values to not enter this block every loop
     chosenFromApp = false;
+    pressedButton = -1;
   }
   
   // wait until a button is pressed
@@ -775,17 +795,27 @@ void receive() {
       }
 
       rawData[dataLength - 1] = 1000; // Arbitrary trailing space
-      
-      Command recCommand = {rawData, dataLength, -1 * (chosenButton + 1)}; 
-      commandMap[chosenButton] = recCommand; // Write the received command to the map
+
+      Command recCommand;
+      if (!mappingToCustomButton) {
+        recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
+        commandMap[chosenButton] = recCommand; // Write the received command to the map
+      }
+      else {
+        recCommand = {rawData, dataLength, chosenButton};
+      }
       
       mqttPublishWithLog(TOPIC_IR_OUT, serializeCommand(recCommand));
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
       drawReceiveSignal();
+
       drawRemote(); // Reset the UI
+
+      // Reset logic variables
+      if (mappingToCustomButton) switchMode();
+      mappingToCustomButton = false;
       chosenButton = -1;
-      chosenFromApp = false;
     }
   } 
 }

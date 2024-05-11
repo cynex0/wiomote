@@ -1,10 +1,7 @@
 package se.gu.wiomote.network.mqtt;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import android.util.Log;
 
-import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedContext;
 import com.hivemq.client.mqtt.lifecycle.MqttClientConnectedListener;
@@ -31,6 +28,7 @@ public class WioMQTTClient {
     private static final String CONN_IN_TOPIC = "wiomote/connection/terminal";
     private static final String CONN_OUT_TOPIC = "wiomote/connection/app";
     private static final String IR_IN_TOPIC = "wiomote/ir/terminal";
+    private static final String TERMINAL_MODE_TOPIC = "wiomote/mode/current";
     private static final TimeoutBoolean connected = new TimeoutBoolean(6900);
     private static final Mqtt3AsyncClient client = Mqtt3Client.builder()
             .identifier(ID_SUFFIX + UUID.randomUUID())
@@ -46,9 +44,9 @@ public class WioMQTTClient {
             .build()
             .toAsync();
 
-    ; // 2
     private static WioMQTTClient.OnConnectionStatusChanged connectionListener = null;
     private static CommandReceivedListener commandListener = null;
+    private static TerminalModeListener terminalModeListener = null;
     private static ConnectionStatus state = ConnectionStatus.UNKNOWN;
     private static boolean ready = false;
 
@@ -73,9 +71,15 @@ public class WioMQTTClient {
                         client.connect()
                                 .thenCompose(connAck -> { // attach handling
                                     Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
-
-                                    subscribe(IR_IN_TOPIC, payload -> commandListener.onCommandReceived(payload));
                                     return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
+                                }).thenCompose(mqtt3SubAck -> {
+                                    return subscribe(IR_IN_TOPIC, payload -> Utils.runOnUiThread(() -> commandListener.onCommandReceived(payload)));
+                                }).thenCompose(mqtt3SubAck -> {
+                                    return subscribe(TERMINAL_MODE_TOPIC, payload -> {
+                                        String mode = new String(payload.getPayloadAsBytes());
+                                        if ("EMIT".equals(mode)) terminalModeListener.onExitedCloningMode();
+                                        else if ("CLONE".equals(mode)) terminalModeListener.onEnteredCloningMode();
+                                    });
                                 }).thenCompose(subAck -> {
                                     return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
                                 });
@@ -154,6 +158,10 @@ public class WioMQTTClient {
         commandListener = listener;
     }
 
+    public static void setTerminalModeListener(TerminalModeListener listener) {
+        terminalModeListener = listener;
+    }
+
     public interface OnConnectionStatusChanged {
         void onConnected();
 
@@ -162,5 +170,10 @@ public class WioMQTTClient {
 
     public interface CommandReceivedListener {
         void onCommandReceived(Mqtt3Publish payload);
+    }
+
+    public interface TerminalModeListener {
+        void onEnteredCloningMode();
+        void onExitedCloningMode();
     }
 }
