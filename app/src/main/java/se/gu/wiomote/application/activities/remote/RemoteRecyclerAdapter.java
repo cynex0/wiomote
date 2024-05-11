@@ -1,10 +1,10 @@
 package se.gu.wiomote.application.activities.remote;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -13,10 +13,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.configurations.Configuration;
+import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
@@ -25,15 +27,15 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     private static final int CUSTOM_BUTTON = 2;
     private final Configuration configuration;
     private final List<Command> commands;
-    private final Dialog dialog;
-    private final Activity activity;
+    private final Dialog waitingDialog;
+    private final Remote activity;
 
-    public RemoteRecyclerAdapter(Activity activity, Configuration configuration) {
+    public RemoteRecyclerAdapter(Remote activity, Configuration configuration) {
         this.activity = activity;
         this.configuration = configuration;
         this.commands = configuration.getCustomCommands();
 
-        this.dialog = new MaterialAlertDialogBuilder(activity)
+        this.waitingDialog = new MaterialAlertDialogBuilder(activity)
                 .setView(activity.getLayoutInflater().inflate(R.layout.waiting_dialog, null))
                 .setCancelable(false)
                 .create();
@@ -55,7 +57,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                 WioMQTTClient.publish(REQUEST_CLONING_TOPIC,
                         String.valueOf(commands.size()).getBytes());
 
-                dialog.show();
+                waitingDialog.show();
             });
         }
 
@@ -77,6 +79,48 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
                 holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                         configuration.serializeCommand(position, true).getBytes()));
+
+                holder.itemView.setOnLongClickListener(view -> {
+                    AtomicReference<Dialog> dialog = new AtomicReference<>(null);
+
+                    View root = activity.getLayoutInflater().inflate(R.layout.remove_dialog, null);
+
+                    Button cancel = root.findViewById(R.id.cancel);
+                    Button remove = root.findViewById(R.id.remove);
+
+                    cancel.setOnClickListener(v -> {
+                        if (dialog.get() != null) {
+                            dialog.get().dismiss();
+                        }
+                    });
+
+                    remove.setOnClickListener(v -> {
+                        configuration.removeCommand(position);
+
+                        //TODO generalize
+                        activity.getDatabase()
+                                .update(ConfigurationType.TV, configuration);
+
+                        int index = commands.indexOf(command);
+
+                        if (index >= 0) {
+                            commands.remove(index);
+                            notifyItemRemoved(index);
+                        }
+
+                        if (dialog.get() != null) {
+                            dialog.get().dismiss();
+                        }
+                    });
+
+                    dialog.set(new MaterialAlertDialogBuilder(activity)
+                            .setView(root)
+                            .create());
+
+                    dialog.get().show();
+
+                    return true;
+                });
             }
         }
     }
@@ -96,7 +140,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     }
 
     public void hideDialog() {
-        dialog.dismiss();
+        waitingDialog.dismiss();
     }
 
     protected static class ViewHolder extends RecyclerView.ViewHolder {
