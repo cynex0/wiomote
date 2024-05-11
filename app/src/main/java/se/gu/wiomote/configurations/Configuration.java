@@ -14,14 +14,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import se.gu.wiomote.utils.CustomCommandJson;
-
 public class Configuration {
     private static final String TAG = "Configuration";
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
-    private final String uuid;
     private final Map<Integer, Command> commands;
+    private final String uuid;
     public String name;
 
     public Configuration(String uuid, String name,
@@ -44,26 +42,28 @@ public class Configuration {
     }
 
     /**
-     * Add command to command map from existing {@link Command} instance
-     */
-    public void addCommand(int keyCode, Command command) {
-        commands.put(keyCode, command);
-    }
-
-    /**
      * Add command to command map from existing JSON String instance
      *
      * @param jsonString valid JSON object string representation
      */
-    public void addCommand(@NonNull String jsonString) {
+    public Command addCommand(@NonNull String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
 
-            addCommand(jsonObject.getInt(KEYCODE_KEY),
-                    Command.deserialize(jsonObject.getJSONObject(COMMAND_KEY)));
+            Command command = Command.deserialize(jsonObject.getJSONObject(COMMAND_KEY));
+
+            commands.put(jsonObject.getInt(KEYCODE_KEY), command);
+
+            return command;
         } catch (JSONException e) {
             Log.e(TAG, "deserialize: Malformed command.");
+
+            return null;
         }
+    }
+
+    public void removeCommand(int keyCode) {
+        commands.remove(keyCode);
     }
 
     /**
@@ -71,10 +71,10 @@ public class Configuration {
      *
      * @param jsonString valid JSON object string representation
      */
-    public static Map<Integer, Command> deserializeCommands(String jsonString) {
+    public static LinkedHashMap<Integer, Command> deserializeCommands(String jsonString) {
         try {
             JSONArray array = new JSONArray(jsonString);
-            Map<Integer, Command> map = new LinkedHashMap<>();
+            LinkedHashMap<Integer, Command> map = new LinkedHashMap<>();
 
             for (int index = 0; index < array.length(); index++) {
                 try {
@@ -153,15 +153,16 @@ public class Configuration {
         return builder.toString();
     }
 
-    public List<CustomCommandJson> getCustomCommands() {
-        List<CustomCommandJson> customCommands = new ArrayList<>();
-        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
+    public List<Command> getCustomCommands() {
+        List<Command> commands = new ArrayList<>();
+
+        for (Map.Entry<Integer, Command> entry : this.commands.entrySet()) {
             if (entry.getKey() >= 0) {
-                Command command = entry.getValue();
-                customCommands.add(new CustomCommandJson(command.label, serializeCommand(entry.getKey(), true)));
+                commands.add(entry.getValue());
             }
         }
-        return customCommands;
+
+        return commands;
     }
 
     private boolean commandsEqual(Map<Integer, Command> otherCommands) {

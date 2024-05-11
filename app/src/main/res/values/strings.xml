@@ -6,6 +6,8 @@
     <string name="connect">Send network data ↗</string>
     <string name="password">Password</string>
     <string name="waiting">Waiting for terminal…</string>
+    <string name="waiting_input">Waiting for IR…</string>
+    <string name="label">Label</string>
     <string name="network_connection">Please connect to the Wi-Fi network the terminal should use ↗</string>
     <string name="bluetooth">Bluetooth</string>
     <string name="bluetooth_connection">Bluetooth needed to connect to the terminal ↗</string>
@@ -13,4 +15,6 @@
     <string name="connection_lost">Terminal not connected</string>
     <string name="configurations">Configurations</string>
     <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
 </resources>

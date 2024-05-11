@@ -28,7 +28,7 @@ public class WioMQTTClient {
     private static final String CONN_IN_TOPIC = "wiomote/connection/terminal";
     private static final String CONN_OUT_TOPIC = "wiomote/connection/app";
     private static final String IR_IN_TOPIC = "wiomote/ir/terminal";
-    private static final String TERMINAL_MODE_TOPIC = "wiomote/mode/current";
+    private static final String TERMINAL_MODE_TOPIC = "wiomote/mode";
     private static final TimeoutBoolean connected = new TimeoutBoolean(6900);
     private static final Mqtt3AsyncClient client = Mqtt3Client.builder()
             .identifier(ID_SUFFIX + UUID.randomUUID())
@@ -73,7 +73,8 @@ public class WioMQTTClient {
                                     Log.d(TAG, "Successfully connected to broker - " + HOST + ":" + PORT);
                                     return subscribe(CONN_IN_TOPIC, payload -> connected.setTrue());
                                 }).thenCompose(mqtt3SubAck -> {
-                                    return subscribe(IR_IN_TOPIC, payload -> Utils.runOnUiThread(() -> commandListener.onCommandReceived(payload)));
+                                    return subscribe(IR_IN_TOPIC, payload -> Utils.runOnUiThread(() ->
+                                            commandListener.onCommandReceived(payload)));
                                 }).thenCompose(mqtt3SubAck -> {
                                     return subscribe(TERMINAL_MODE_TOPIC, payload -> {
                                         String mode = new String(payload.getPayloadAsBytes());

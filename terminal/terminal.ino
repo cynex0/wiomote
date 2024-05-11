@@ -95,12 +95,12 @@
 #define MQTT_PORT                 1883
 #define UUID_PREFIX     "WioTerminal-"
 
-#define TOPIC_CONN_OUT  "wiomote/connection/terminal"
-#define TOPIC_CONN_IN        "wiomote/connection/app"
-#define TOPIC_IR_IN                  "wiomote/ir/app"
-#define TOPIC_IR_OUT            "wiomote/ir/terminal"
-#define TOPIC_CURRENT_MODE     "wiomote/mode/current"
-#define TOPIC_SWITCH_MODE "wiomote/mode/requestClone"
+#define TOPIC_CONN_OUT "wiomote/connection/terminal"
+#define TOPIC_CONN_IN       "wiomote/connection/app"
+#define TOPIC_IR_IN                 "wiomote/ir/app"
+#define TOPIC_IR_OUT           "wiomote/ir/terminal"
+#define TOPIC_CURRENT_MODE            "wiomote/mode"
+#define TOPIC_SWITCH_MODE    "wiomote/request/clone"
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38

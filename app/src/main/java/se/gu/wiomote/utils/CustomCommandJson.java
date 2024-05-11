@@ -1,7 +1,5 @@
 package se.gu.wiomote.utils;
 
-import se.gu.wiomote.configurations.Command;
-
 public class CustomCommandJson {
     public String label;
     public String commandJson;

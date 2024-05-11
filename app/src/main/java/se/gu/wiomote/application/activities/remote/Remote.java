@@ -1,12 +1,16 @@
 package se.gu.wiomote.application.activities.remote;
 
 import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.provider.ContactsContract;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -14,11 +18,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SnapHelper;
 
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
@@ -27,7 +32,6 @@ import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
-import se.gu.wiomote.utils.CustomCommandJson;
 
 public class Remote extends DatabaseAccessActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
@@ -78,22 +82,6 @@ public class Remote extends DatabaseAccessActivity {
             config = new Configuration(UUID.randomUUID().toString());
         }
 
-        WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
-            private Configuration prevConfig;
-
-            @Override
-            public void onEnteredCloningMode() {
-                prevConfig = config;
-            }
-            @Override
-            public void onExitedCloningMode() {
-                if (config != null && !config.equals(prevConfig)) {
-                    getDatabase().update(ConfigurationType.TV, config);
-                    Log.i(TAG, "Updated DB.");
-                }
-            }
-        });
-
         for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
             View button = entry.getValue();
 
@@ -103,21 +91,92 @@ public class Remote extends DatabaseAccessActivity {
             }
         }
 
+        RemoteRecyclerAdapter adapter;
+
         if (config != null) {
             recyclerView.setLayoutManager(new GridLayoutManager(this, 2,
                     LinearLayoutManager.HORIZONTAL, false));
             recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-            RemoteRecyclerAdapter adapter = new RemoteRecyclerAdapter(this, config.getCustomCommands());
+            adapter = new RemoteRecyclerAdapter(this, config);
             recyclerView.setAdapter(adapter);
 
             WioMQTTClient.setCommandReceivedListener(payload -> {
-                config.addCommand(new String(payload.getPayloadAsBytes()));
-                adapter.updateCustomCommands(config.getCustomCommands());
-                adapter.notifyDataSetChanged();
+                Command command = config.addCommand(new String(payload.getPayloadAsBytes()));
+                int index = adapter.getItemCount();
+
+                AtomicReference<Dialog> dialog = new AtomicReference<>(null);
+
+                View root = getLayoutInflater().inflate(R.layout.label_dialog, null);
+
+                EditText editText = root.findViewById(R.id.text);
+                Button cancel = root.findViewById(R.id.cancel);
+                Button save = root.findViewById(R.id.save);
+
+                editText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        save.setEnabled(s.length() > 0);
+                    }
+                });
+
+                cancel.setOnClickListener(v -> {
+                    config.removeCommand(index);
+
+                    if (dialog.get() != null) {
+                        dialog.get().dismiss();
+                    }
+                });
+
+                save.setOnClickListener(v -> {
+                    command.label = editText.getText().toString();
+
+                    //TODO generalize
+                    getDatabase().update(ConfigurationType.TV, config);
+
+                    adapter.addCustomCommand(command);
+                    adapter.notifyItemInserted(index);
+
+                    if (dialog.get() != null) {
+                        dialog.get().dismiss();
+                    }
+                });
+
+
+                dialog.set(new MaterialAlertDialogBuilder(this).setView(root)
+                        .setOnCancelListener(d -> config.removeCommand(index))
+                        .create());
+
+                dialog.get().show();
+
+                adapter.hideDialog();
             });
 
             SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
             snapHelper.attachToRecyclerView(recyclerView);
         }
+
+        WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+            private Configuration prevConfig;
+
+            @Override
+            public void onEnteredCloningMode() {
+                prevConfig = config;
+            }
+
+            @Override
+            public void onExitedCloningMode() {
+                if (config != null && !config.equals(prevConfig)) {
+                    getDatabase().update(ConfigurationType.TV, config);
+                }
+            }
+        });
     }
 }
