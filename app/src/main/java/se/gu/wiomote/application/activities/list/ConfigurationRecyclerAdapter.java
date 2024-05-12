@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.activities.remote.Remote;
-import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 
@@ -31,11 +30,13 @@ public class ConfigurationRecyclerAdapter extends
     private final Activity activity;
     private final List<String> uuids;
     private final List<String> names;
+    private final Database database;
 
     public ConfigurationRecyclerAdapter(Activity activity, Database database) {
         this.activity = activity;
         this.uuids = new ArrayList<>();
         this.names = new ArrayList<>();
+        this.database = database;
 
         for (ConfigurationType type : ConfigurationType.values()) {
             uuids.add(null);
@@ -94,6 +95,23 @@ public class ConfigurationRecyclerAdapter extends
 
                 activity.finish();
             });
+            holder.delete.setOnClickListener(v -> {
+                database.remove(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
+                uuids.remove(position);
+                names.remove(position);
+
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, uuids.size() - position);
+
+                // Choose the next configuration automatically to avoid re-writing deleted config to the DB
+                // TODO: Needs a better solution
+                int nextConfig = getNextConfigPosition(position);
+                if (nextConfig >= 0) {
+                    Remote.updateConfiguration(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(nextConfig))), uuids.get(nextConfig));
+                } else {
+                    activity.finish();
+                }
+            });
         } else {
             holder.itemView.setOnLongClickListener(null);
             HeaderViewHolder headerViewHolder = (HeaderViewHolder) holder;
@@ -132,13 +150,22 @@ public class ConfigurationRecyclerAdapter extends
         return 0;
     }
 
+    private int getNextConfigPosition(int position) {
+        for (int i = position; i < uuids.size(); i++) {
+            if (uuids.get(i) != null) return i;
+        }
+        return -1;
+    }
+
     protected static class ItemViewHolder extends RecyclerView.ViewHolder {
         protected final TextView label;
+        protected final ImageView delete;
 
         public ItemViewHolder(@NonNull View itemView) {
             super(itemView);
 
             label = itemView.findViewById(R.id.label);
+            delete = itemView.findViewById(R.id.delete);
         }
     }
 
