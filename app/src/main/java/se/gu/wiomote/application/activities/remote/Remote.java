@@ -49,6 +49,7 @@ public class Remote extends DatabaseAccessActivity {
     private SharedPreferences preferences;
     private RecyclerView recyclerView;
     private TextView label;
+    private Configuration config;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -83,11 +84,11 @@ public class Remote extends DatabaseAccessActivity {
     }
 
     private void updateLayout() {
-        Configuration config;
+        String name;
         Cursor cursor = getDatabase().get(type, uuid);
 
-        if (cursor != null) {
-            String name = Database.getColumn(cursor, Database.Columns.NAME);
+        if (cursor.getCount() > 0) { // Configuration for current uuid exists in the db
+            name = Database.getColumn(cursor, Database.Columns.NAME);
             Map<Integer, Command> commands = Configuration.deserializeCommands(
                     Database.getColumn(cursor, Database.Columns.COMMANDS)
             );
@@ -99,15 +100,18 @@ public class Remote extends DatabaseAccessActivity {
 
                 Log.e(TAG, "Could not load configuration");
             } else {
-                config = new Configuration(uuid, name, commands);
-
-                label.setText(name);
+                config = new Configuration(uuid, name, commands); // Create Configuration from loaded data
             }
-        } else {
-            config = new Configuration(java.util.UUID.randomUUID().toString());
+        } else { // Create a new configuration
+            name = type.toString() + "-" + uuid.substring(0, 4);
+            config = new Configuration(uuid, name);
+            getDatabase().insert(type, config);
         }
 
+        label.setText(name); // Display the name of the configuration
+
         for (Map.Entry<Integer, View> entry : basicButtonMap.entrySet()) {
+            // Add listeners to all buttons
             View button = entry.getValue();
 
             if (config != null) {
@@ -126,67 +130,77 @@ public class Remote extends DatabaseAccessActivity {
             recyclerView.setAdapter(adapter);
 
             WioMQTTClient.setCommandReceivedListener(payload -> {
-                Command command = config.addCommand(new String(payload.getPayloadAsBytes()));
-                int index = adapter.getItemCount();
+                // When a command is received from MQTT, add it to the config
+                Integer addedCommandKeyCode = config.addCommand(new String(payload.getPayloadAsBytes()));
 
-                AtomicReference<Dialog> dialog = new AtomicReference<>(null);
+                // If it is a command for a custom button, display a dialog requesting a name for the button
+                if (addedCommandKeyCode != null && addedCommandKeyCode >= 0) {
+                    int index = adapter.getItemCount();
 
-                View root = getLayoutInflater().inflate(R.layout.label_dialog, null);
+                    AtomicReference<Dialog> dialog = new AtomicReference<>(null);
 
-                EditText editText = root.findViewById(R.id.text);
-                Button cancel = root.findViewById(R.id.cancel);
-                Button save = root.findViewById(R.id.save);
+                    View root = getLayoutInflater().inflate(R.layout.label_dialog, null);
 
-                editText.addTextChangedListener(new TextWatcher() {
-                    @Override
-                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    }
+                    EditText editText = root.findViewById(R.id.text);
+                    Button cancel = root.findViewById(R.id.cancel);
+                    Button save = root.findViewById(R.id.save);
 
-                    @Override
-                    public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    }
+                    editText.addTextChangedListener(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                        }
 
-                    @Override
-                    public void afterTextChanged(Editable s) {
-                        save.setEnabled(s.length() > 0);
-                    }
-                });
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+                        }
 
-                cancel.setOnClickListener(v -> {
-                    config.removeCommand(index);
+                        @Override
+                        public void afterTextChanged(Editable s) {
+                            save.setEnabled(s.length() > 0);
+                        }
+                    });
 
-                    if (dialog.get() != null) {
-                        dialog.get().dismiss();
-                    }
-                });
+                    cancel.setOnClickListener(v -> {
+                        config.removeCommand(index);
 
-                save.setOnClickListener(v -> {
-                    command.label = editText.getText().toString();
+                        if (dialog.get() != null) {
+                            dialog.get().dismiss();
+                        }
+                    });
 
-                    getDatabase().update(type, config);
+                    save.setOnClickListener(v -> {
+                        Command command = config.getCommandForKeyCode(addedCommandKeyCode);
+                        command.label = editText.getText().toString();
 
-                    adapter.addCustomCommand(command);
-                    adapter.notifyItemInserted(index);
+                        getDatabase().update(type, config);
 
-                    if (dialog.get() != null) {
-                        dialog.get().dismiss();
-                    }
-                });
+                        adapter.addCustomCommand(command);
+                        adapter.notifyItemInserted(index);
+
+                        if (dialog.get() != null) {
+                            dialog.get().dismiss();
+                        }
+                    });
 
 
-                dialog.set(new MaterialAlertDialogBuilder(this).setView(root)
-                        .setOnCancelListener(d -> config.removeCommand(index))
-                        .create());
+                    dialog.set(new MaterialAlertDialogBuilder(this).setView(root)
+                            .setOnCancelListener(d -> config.removeCommand(index))
+                            .create());
 
-                dialog.get().show();
+                    dialog.get().show();
 
-                adapter.hideDialog();
+                    adapter.hideDialog();
+                } else {
+                    getDatabase().update(type, config); // always update the DB if a basic command is recorded
+                }
             });
 
             SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
             snapHelper.attachToRecyclerView(recyclerView);
         }
 
+
+        // Set listener to update the DB every time the terminal exits cloning mode and the config changes
         WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
             private Configuration prevConfig;
 
@@ -220,7 +234,7 @@ public class Remote extends DatabaseAccessActivity {
         preferences.edit()
                 .putString(UUID, uuid)
                 .putString(TYPE, type.toString())
-                .apply();
+                .apply(); // save current config to SharedPreferences to keep selection on next launch
 
         super.onStop();
     }

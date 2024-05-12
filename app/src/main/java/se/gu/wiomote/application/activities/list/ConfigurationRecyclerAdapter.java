@@ -2,9 +2,11 @@ package se.gu.wiomote.application.activities.list;
 
 import android.app.Activity;
 import android.database.Cursor;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -14,14 +16,16 @@ import com.shuhart.stickyheader.StickyAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.activities.remote.Remote;
+import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 
 public class ConfigurationRecyclerAdapter extends
-        StickyAdapter<ConfigurationRecyclerAdapter.ViewHolder, ConfigurationRecyclerAdapter.ViewHolder> {
+        StickyAdapter<ConfigurationRecyclerAdapter.HeaderViewHolder, ConfigurationRecyclerAdapter.ItemViewHolder> {
     private static final int LIST_ITEM = 0;
     private static final int HEADER_ITEM = 1;
     private final Activity activity;
@@ -59,25 +63,25 @@ public class ConfigurationRecyclerAdapter extends
 
     @NonNull
     @Override
-    public ConfigurationRecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(activity);
 
         if (viewType == LIST_ITEM) {
-            return new ViewHolder(inflater.inflate(R.layout.list_item, parent, false));
+            return new ItemViewHolder(inflater.inflate(R.layout.list_item, parent, false));
         } else {
-            return new ViewHolder(inflater.inflate(R.layout.header_item, parent, false));
+            return new HeaderViewHolder(inflater.inflate(R.layout.header_item, parent, false));
         }
     }
 
     @Override
-    public ConfigurationRecyclerAdapter.ViewHolder onCreateHeaderViewHolder(ViewGroup parent) {
+    public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent) {
         LayoutInflater inflater = LayoutInflater.from(activity);
 
-        return new ViewHolder(inflater.inflate(R.layout.header_item, parent, false));
+        return new HeaderViewHolder(inflater.inflate(R.layout.header_item, parent, false));
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ConfigurationRecyclerAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {
         String uuid = uuids.get(position);
         String name = names.get(position);
 
@@ -92,11 +96,18 @@ public class ConfigurationRecyclerAdapter extends
             });
         } else {
             holder.itemView.setOnLongClickListener(null);
+            HeaderViewHolder headerViewHolder = (HeaderViewHolder) holder;
+            headerViewHolder.add.setOnClickListener(v -> {
+                String newUuid = UUID.randomUUID().toString();
+                Remote.updateConfiguration(ConfigurationType.valueOf(name), newUuid);
+                Log.i("TAG", "Creating new config " + name + newUuid);
+                activity.finish();
+            });
         }
     }
 
     @Override
-    public void onBindHeaderViewHolder(ConfigurationRecyclerAdapter.ViewHolder holder, int headerPosition) {
+    public void onBindHeaderViewHolder(HeaderViewHolder holder, int headerPosition) {
         holder.label.setText(names.get(headerPosition));
     }
 
@@ -121,13 +132,23 @@ public class ConfigurationRecyclerAdapter extends
         return 0;
     }
 
-    protected static class ViewHolder extends RecyclerView.ViewHolder {
+    protected static class ItemViewHolder extends RecyclerView.ViewHolder {
         protected final TextView label;
 
-        public ViewHolder(@NonNull View itemView) {
+        public ItemViewHolder(@NonNull View itemView) {
             super(itemView);
 
             label = itemView.findViewById(R.id.label);
+        }
+    }
+
+    protected static class HeaderViewHolder extends ItemViewHolder {
+        protected final ImageView add;
+
+        public HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            add = itemView.findViewById(R.id.addConfig);
         }
     }
 }

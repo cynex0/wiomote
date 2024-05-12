@@ -41,20 +41,34 @@ public class Configuration {
         return uuid;
     }
 
+    public boolean hasCommandForKeyCode(int keyCode) {
+        return commands.containsKey(keyCode);
+    }
+
+    public Command getCommandForKeyCode(int keyCode) {
+        return commands.get(keyCode);
+    }
+
+    public int getButtonCount() {
+        return commands.size();
+    }
+
     /**
      * Add command to command map from existing JSON String instance
      *
      * @param jsonString valid JSON object string representation
+     * @return keyCode of the added command
      */
-    public Command addCommand(@NonNull String jsonString) {
+    public Integer addCommand(@NonNull String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
 
             Command command = Command.deserialize(jsonObject.getJSONObject(COMMAND_KEY));
+            int keyCode = jsonObject.getInt(KEYCODE_KEY);
 
-            commands.put(jsonObject.getInt(KEYCODE_KEY), command);
+            commands.put(keyCode, command);
 
-            return command;
+            return keyCode;
         } catch (JSONException e) {
             Log.e(TAG, "deserialize: Malformed command.");
 
@@ -109,15 +123,12 @@ public class Configuration {
         StringBuilder builder = new StringBuilder();
         Command command = commands.getOrDefault(keyCode, null);
 
-        if (command == null) {
-            return null;
-        }
-
         builder.append("{")
                 .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<keyCode>,
-                .append("\"" + COMMAND_KEY + "\":") // "command":
-                .append(command.serialize(omitLabel)) // (see Command.java)
-                .append("}");
+                .append("\"" + COMMAND_KEY + "\":"); // "command":
+
+        if (command != null) builder.append(command.serialize(omitLabel)); // (see Command.java)
+        builder.append("}");
 
         return builder.toString();
     }
