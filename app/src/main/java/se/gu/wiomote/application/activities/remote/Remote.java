@@ -103,7 +103,7 @@ public class Remote extends DatabaseAccessActivity {
                 config = new Configuration(uuid, name, commands); // Create Configuration from loaded data
             }
         } else { // Create a new configuration
-            name = type.toString() + "-" + uuid.substring(0, 4);
+            name = type.toString() + "-" + uuid.substring(0, 4); // TODO: prompt the user for a name
             config = new Configuration(uuid, name);
             getDatabase().insert(type, config);
         }
@@ -247,5 +247,9 @@ public class Remote extends DatabaseAccessActivity {
 
             update = true;
         }
+    }
+
+    public static boolean isLoaded(String uuidChecker) {
+        return uuid != null && uuid.equals(uuidChecker);
     }
 }

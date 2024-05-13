@@ -24,22 +24,25 @@ import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 
 public class ConfigurationRecyclerAdapter extends
-        StickyAdapter<ConfigurationRecyclerAdapter.HeaderViewHolder, ConfigurationRecyclerAdapter.ItemViewHolder> {
+        StickyAdapter<ConfigurationRecyclerAdapter.HeaderViewHolder, ConfigurationRecyclerAdapter.ViewHolder> {
     private static final int LIST_ITEM = 0;
     private static final int HEADER_ITEM = 1;
     private final Activity activity;
     private final List<String> uuids;
+    private final List<ConfigurationType> types;
     private final List<String> names;
     private final Database database;
 
     public ConfigurationRecyclerAdapter(Activity activity, Database database) {
         this.activity = activity;
         this.uuids = new ArrayList<>();
+        this.types = new ArrayList<>();
         this.names = new ArrayList<>();
         this.database = database;
 
         for (ConfigurationType type : ConfigurationType.values()) {
             uuids.add(null);
+            types.add(type);
             names.add(type.toString());
 
             Cursor cursor = database.getAll(type, Database.Columns.UUID, Database.Columns.NAME);
@@ -51,6 +54,7 @@ public class ConfigurationRecyclerAdapter extends
                 if (uuidIndex >= 0 && nameIndex >= 0) {
                     while (!cursor.isAfterLast()) {
                         uuids.add(cursor.getString(uuidIndex));
+                        types.add(type);
                         names.add(cursor.getString(nameIndex));
 
                         cursor.moveToNext();
@@ -64,7 +68,7 @@ public class ConfigurationRecyclerAdapter extends
 
     @NonNull
     @Override
-    public ItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ConfigurationRecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(activity);
 
         if (viewType == LIST_ITEM) {
@@ -78,55 +82,86 @@ public class ConfigurationRecyclerAdapter extends
     public HeaderViewHolder onCreateHeaderViewHolder(ViewGroup parent) {
         LayoutInflater inflater = LayoutInflater.from(activity);
 
-        return new HeaderViewHolder(inflater.inflate(R.layout.header_item, parent, false));
+        View view = inflater.inflate(R.layout.header_item, parent, false);
+
+        return new HeaderViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ItemViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ConfigurationRecyclerAdapter.ViewHolder holder, int position) {
         String uuid = uuids.get(position);
         String name = names.get(position);
 
         holder.label.setText(name);
 
-        if (uuid != null) {
+        if (holder instanceof ItemViewHolder) {
+            ItemViewHolder itemViewHolder = (ItemViewHolder) holder;
+
             holder.itemView.setOnClickListener(v -> {
                 Remote.updateConfiguration(
                         ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
 
                 activity.finish();
             });
-            holder.delete.setOnClickListener(v -> {
-                database.remove(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
-                uuids.remove(position);
-                names.remove(position);
 
-                notifyItemRemoved(position);
-                notifyItemRangeChanged(position, uuids.size() - position);
+            if(ConfigurationType.CUSTOM.equals(types.get(position))) {
+                itemViewHolder.delete.setVisibility(View.VISIBLE);
 
-                // Choose the next configuration automatically to avoid re-writing deleted config to the DB
-                // TODO: Needs a better solution
-                int nextConfig = getNextConfigPosition(position);
-                if (nextConfig >= 0) {
-                    Remote.updateConfiguration(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(nextConfig))), uuids.get(nextConfig));
-                } else {
-                    activity.finish();
-                }
-            });
-        } else {
-            holder.itemView.setOnLongClickListener(null);
+                itemViewHolder.delete.setOnClickListener(v -> {
+                    database.remove(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
+
+                    uuids.remove(position);
+                    types.remove(position);
+                    names.remove(position);
+
+                    notifyItemRemoved(position);
+                    notifyItemRangeChanged(position, uuids.size() - position);
+
+                    // Choose the next configuration automatically to avoid re-writing deleted config to the DB
+                    if(Remote.isLoaded(uuid)) {
+                        int nextConfig = getFirstValidConfigIndex();
+                        if (nextConfig >= 0) {
+                            Remote.updateConfiguration(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(nextConfig))), uuids.get(nextConfig));
+                        } else {
+                            activity.finish();
+                        }
+                    }
+                });
+            } else {
+                itemViewHolder.delete.setVisibility(View.GONE);
+            }
+        } else if (holder instanceof HeaderViewHolder){
             HeaderViewHolder headerViewHolder = (HeaderViewHolder) holder;
-            headerViewHolder.add.setOnClickListener(v -> {
-                String newUuid = UUID.randomUUID().toString();
-                Remote.updateConfiguration(ConfigurationType.valueOf(name), newUuid);
-                Log.i("TAG", "Creating new config " + name + newUuid);
-                activity.finish();
-            });
+
+            holder.itemView.setOnLongClickListener(null);
+
+            if(ConfigurationType.CUSTOM.equals(types.get(position))) {
+                headerViewHolder.add.setVisibility(View.VISIBLE);
+
+                headerViewHolder.add.setOnClickListener(v -> {
+                    String newUuid = UUID.randomUUID().toString();
+                    Remote.updateConfiguration(ConfigurationType.valueOf(name), newUuid);
+                    Log.i("TAG", "Creating new config " + name + newUuid);
+
+                    activity.finish();
+                });
+            } else {
+                headerViewHolder.add.setVisibility(View.GONE);
+            }
         }
     }
 
     @Override
     public void onBindHeaderViewHolder(HeaderViewHolder holder, int headerPosition) {
-        holder.label.setText(names.get(headerPosition));
+        String name = names.get(headerPosition);
+
+        holder.label.setText(name);
+
+        if(ConfigurationType.CUSTOM.equals(types.get(headerPosition))) {
+            holder.add.setVisibility(View.VISIBLE);
+        } else {
+            holder.add.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -150,26 +185,45 @@ public class ConfigurationRecyclerAdapter extends
         return 0;
     }
 
-    private int getNextConfigPosition(int position) {
-        for (int i = position; i < uuids.size(); i++) {
-            if (uuids.get(i) != null) return i;
+    private int getFirstValidConfigIndex() {
+        if(uuids.isEmpty()) {
+            return -1;
         }
+
+        int index = 0;
+
+        do {
+            if (uuids.get(index) != null) {
+                return index;
+            }
+
+            index = index + 1;
+        } while(index < getItemCount());
+
         return -1;
     }
 
-    protected static class ItemViewHolder extends RecyclerView.ViewHolder {
+    protected static class ViewHolder extends RecyclerView.ViewHolder {
         protected final TextView label;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            label = itemView.findViewById(R.id.label);
+        }
+    }
+
+    protected static class ItemViewHolder extends ViewHolder {
         protected final ImageView delete;
 
         public ItemViewHolder(@NonNull View itemView) {
             super(itemView);
 
-            label = itemView.findViewById(R.id.label);
             delete = itemView.findViewById(R.id.delete);
         }
     }
 
-    protected static class HeaderViewHolder extends ItemViewHolder {
+    protected static class HeaderViewHolder extends ViewHolder {
         protected final ImageView add;
 
         public HeaderViewHolder(@NonNull View itemView) {
