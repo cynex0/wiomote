@@ -21,6 +21,7 @@ import se.gu.wiomote.utils.TimeoutBoolean;
 import se.gu.wiomote.utils.Utils;
 
 public class WioMQTTClient {
+    public static final int CONNECTION_TIMEOUT = 2469;
     private static final String TAG = "se.gu.wiomote.MQTT";
     private static final String ID_SUFFIX = "WIOmote_app-";
     private static final String HOST = "broker.hivemq.com";
@@ -29,7 +30,7 @@ public class WioMQTTClient {
     private static final String CONN_OUT_TOPIC = "wiomote/connection/app";
     private static final String IR_IN_TOPIC = "wiomote/ir/terminal";
     private static final String TERMINAL_MODE_TOPIC = "wiomote/mode";
-    private static final TimeoutBoolean connected = new TimeoutBoolean(6900);
+    private static final TimeoutBoolean connected = new TimeoutBoolean(CONNECTION_TIMEOUT);
     private static final Mqtt3AsyncClient client = Mqtt3Client.builder()
             .identifier(ID_SUFFIX + UUID.randomUUID())
             .serverHost(HOST)

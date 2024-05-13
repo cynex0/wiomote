@@ -18,7 +18,8 @@
 
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
-#define DEBUG_LOG   // log events to serial
+//#define DEBUG_LOG   // log events to serial
+//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
 // Button indexes for the array acting as a map
@@ -73,13 +74,15 @@
 
 
 // Buttons
-#define UP_BTN       WIO_5S_UP
-#define DOWN_BTN   WIO_5S_DOWN
-#define LEFT_BTN   WIO_5S_LEFT
-#define RIGHT_BTN WIO_5S_RIGHT
-#define PRESS_BTN WIO_5S_PRESS
-#define POWER_BTN    WIO_KEY_C
-#define MODE_BTN     WIO_KEY_A
+#define UP_BTN        WIO_5S_UP
+#define DOWN_BTN    WIO_5S_DOWN
+#define LEFT_BTN    WIO_5S_LEFT
+#define RIGHT_BTN  WIO_5S_RIGHT
+#define PRESS_BTN  WIO_5S_PRESS
+#define POWER_BTN     WIO_KEY_C
+#define MODE_BTN      WIO_KEY_A
+#define CONFIG_REC_BTN  WIO_KEY_B
+#define CONFIG_SKIP_BTN WIO_KEY_C
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -101,6 +104,10 @@
 #define TOPIC_IR_OUT           "wiomote/ir/terminal"
 #define TOPIC_CURRENT_MODE            "wiomote/mode"
 #define TOPIC_SWITCH_MODE    "wiomote/request/clone"
+
+#ifdef MQTT_PING
+#define MQTT_PING_INTERVAL 1000
+#endif
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
@@ -154,14 +161,15 @@ unsigned long lastPinged = 0;
 
 // Logic variables
 bool receiveMode = false;
+bool configMode = false;
 bool prevModeBtnState = HIGH;
 int chosenButton = -1; // Button selection in the cloning mode
 bool chosenFromApp = false;
 bool mappingToCustomButton = false;
+bool prevConfigBtnState = HIGH;
+bool prevConfigSkipBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
-
-void decideBltConnectionIcon();
 
 // Motor variables
 const int vibDuration = 200;
@@ -172,6 +180,41 @@ bool isVibrating = false;
 const int buzzDuration = 400;
 unsigned long lastBuzzed = 0;
 bool isBuzzing = false;
+
+#ifdef DEBUG_CONFIG_CREATOR
+int completedConfigsCount = 0;
+const int configTextsLength = 11; // number of config buttons that will be recorded (MAX 11)
+char** configTexts = new char*[configTextsLength]{ // label name for each config command
+  "POWER",
+  "UP",
+  "RIGHT",
+  "DOWN",
+  "LEFT",
+  "PRESS",
+  "CHANNEL UP",
+  "CHANNEL DOWN",
+  "VOLUME UP",
+  "VOLUME DOWN",
+  "MUTE"
+};
+Command *configCommandsList = new Command[configTextsLength]; // array to store recorded commands that will be later serialized into one config
+#endif
+
+void decideBltConnectionIcon(){
+  // decide the color according to connection status and previous status so it doesn't loop
+  if(receiveMode || configMode) return;
+  if(bleDeviceConnected){
+    if(bltConnectedPrevVal == true){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }else{
+    if(bltConnectedPrevVal == false){
+      return; // if the bluetooth connection status is the same as before - do nothing
+    }
+    drawBltConnectionIcon(); // if different - draw the icon
+  }
+}
 
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
@@ -308,7 +351,7 @@ void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
     #ifdef MQTT_PING
-      if(millis() - lastPinged > 5000) {
+      if(millis() - lastPinged > MQTT_PING_INTERVAL) {
         mqttPublishWithLog(TOPIC_CONN_OUT, "ping");
         lastPinged = millis();
       }
@@ -398,7 +441,7 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
-	decideWiFiConnectionIcon();
+  decideWiFiConnectionIcon();
     wifiConnectedPrevVal = true;
 
     updateMQTT();
@@ -414,7 +457,7 @@ void updateNetwork() {
 
       wifiDeviceConnected = CONNECTING;
 
-	  decideWiFiConnectionIcon();
+    decideWiFiConnectionIcon();
       wifiConnectedPrevVal = false;
 
       WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
@@ -507,6 +550,13 @@ char* serializeCommand(const Command& command) {
     }
   }
 */
+#ifdef DEBUG_CONFIG_CREATOR
+int convertKeyCodeToApp(const int index) { // Converts the index of the button to the app's key code
+  if(index > BTN_COUNT - 1) return index - BTN_COUNT;
+  return -1 * (index + 1);
+}
+#endif
+
 Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
@@ -523,6 +573,22 @@ Command deserializeCommand(const char* jsonString) {
 
   delete doc;
   return {rawData, dataLength, keyCode};
+}
+
+JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const Command& command) {
+  JsonDocument doc;
+  JsonObject commandObj = doc.createNestedObject("command");
+
+  doc["keyCode"] = keyCode;
+  commandObj["label"] = label;
+  commandObj["dataLength"] = command.dataLength;
+
+  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
+  for (uint8_t i = 0; i < command.dataLength; i++) {
+  rawDataJson.add(command.rawData[i]);
+  }
+
+  return doc;
 }
 
 void startBuzzer() {
@@ -594,7 +660,7 @@ void drawEmitSignal() {  // Draw circles for outgoing signal
 void drawRemote(){
   if (receiveMode) {
     tft.fillScreen(INVERTED_BG_COLOR);
-	  tft.setTextColor(INVERTED_TEXT_COLOR);
+    tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
 	  tft.drawString(F("Select a button"), CENTER_X, CENTER_Y);
   } else {
@@ -640,7 +706,7 @@ void drawRemote(){
 
 void decideWiFiConnectionIcon(){
   // decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode) return;
+  if(receiveMode || configMode) return;
   if(wifiDeviceConnected == CONNECTED){
     if(wifiConnectedPrevVal == true){
       return; // if the wifi connection status is the same as before - do nothing
@@ -675,23 +741,6 @@ void drawWiFiConnectionIcon(){
   tft.fillTriangle(WIFI_CONNECTION_CIRCLE_X + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_X - WIFI_CONNECTION_CIRCLE_MAX_RAD, WIFI_CONNECTION_CIRCLE_Y + WIFI_CONNECTION_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
 }
 
-void decideBltConnectionIcon(){
-	// decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode) return;
-  if(bleDeviceConnected){
-    if(bltConnectedPrevVal == true){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(); // if different - draw the icon
-  }else{
-    if(bltConnectedPrevVal == false){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(); // if different - draw the icon
-  }
-}
-
-
 void drawBltConnectionIcon(){
   // decide the color according to connection status
   uint32_t color;
@@ -713,8 +762,8 @@ void drawBltConnectionIcon(){
 }
 
 void emitData(const Command& command){
-	if (command.rawData != nullptr){
-		emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
+  if (command.rawData != nullptr){
+    emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
     drawEmitSignal();
 
     #ifdef DEBUG_LOG
@@ -730,7 +779,7 @@ void emitData(const Command& command){
 
       Serial.println(F("}"));
     #endif
-	}
+  }
 }
 
 void switchMode(){
@@ -743,18 +792,38 @@ void switchMode(){
 
   mqttPublishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
   
+  if(!receiveMode){
+    receiver.disableIRIn();
+  }
   startBuzzer();
-	drawRemote();
+  drawRemote();
 }
 
+#ifdef DEBUG_CONFIG_CREATOR
+void switchConfigMode(){ // Switches between config mode and normal mode
+  configMode = !configMode;
+  if(configMode){ // If in config mode
+    for(int i = 0; i < configTextsLength; i++){ // Clear the recorded commands
+      configCommandsList[i].rawData = new uint16_t[0];
+      configCommandsList[i].dataLength = 0;
+    }
+      drawConfigDebug();
+  }else{
+    receiver.disableIRIn();
+    drawRemote();
+  }
+  startBuzzer();
+}
+#endif
+
 bool canMapButtons() {
-	for (uint8_t i = 0; i < BTN_COUNT; i++) {
+  for (uint8_t i = 0; i < BTN_COUNT; i++) {
     if (commandMap[i].dataLength == 0) {
       return true;
     }
   }
 
-	return false;
+  return false;
 }
 
 void receive() {
@@ -800,7 +869,6 @@ void receive() {
       if (!mappingToCustomButton) {
         recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
         commandMap[chosenButton] = recCommand; // Write the received command to the map
-      }
       else {
         recCommand = {rawData, dataLength, chosenButton};
       }
@@ -820,32 +888,104 @@ void receive() {
   } 
 }
 
+#ifdef DEBUG_CONFIG_CREATOR
+void drawConfigDebug(){
+  tft.fillScreen(INVERTED_BG_COLOR);
+  tft.setTextColor(INVERTED_TEXT_COLOR);
+  tft.setTextSize(TEXT_SIZE_M);
+  for(int i = 0; i < configTextsLength; i++){
+    tft.drawString(configTexts[i], 20, 20 + 20 * i); // Draw the labels for each config button
+  }
+}
+
+void receiveConfig(){
+  receiver.enableIRIn();
+  
+  // logic for skipping a command
+  if(digitalRead(CONFIG_SKIP_BTN) != prevConfigSkipBtnState){
+	  if(digitalRead(CONFIG_SKIP_BTN) == LOW){
+      tft.setTextColor(TFT_RED);
+      tft.drawString(F("SKIPPED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
+      const uint8_t dataLength = 0;
+      uint16_t *rawData = new uint16_t[dataLength];
+      completedConfigsCount++;
+    }
+  }
+  prevConfigSkipBtnState = digitalRead(CONFIG_SKIP_BTN);
+  
+  if (receiver.getResults()){ // If a signal is received
+    const uint8_t dataLength = recvGlobal.recvLength;
+    uint16_t *rawData = new uint16_t[dataLength];
+  
+    for (uint8_t i = 1; i < dataLength; i++) {
+      rawData[i - 1] = recvGlobal.recvBuffer[i];
+    }
+
+    rawData[dataLength - 1] = 1000; // Arbitrary trailing space
+    const Command recCommand = {rawData, dataLength};
+    configCommandsList[completedConfigsCount] = recCommand; // Save the received command to the list
+
+    tft.setTextColor(TFT_DARKGREEN);
+    tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
+
+    completedConfigsCount++;
+    drawReceiveSignal();
+  }
+  if(completedConfigsCount == configTextsLength){ // If all the config buttons have been recorded
+    delay(500);
+
+    completedConfigsCount = 0;
+	  int appsConfigBtnCount = BTN_COUNT; // Start from the first app button
+
+    switchConfigMode();
+
+    // Serialize the recorded commands into one config
+    JsonDocument* doc = new JsonDocument;
+    JsonArray commandsArray = doc->to<JsonArray>();
+    for(int i = 0; i < configTextsLength; i++){ // Loop through the recorded commands
+      if(configCommandsList[i].dataLength == 0) continue; // Skip if no command was recorded (skipped button)
+      if(i > BTN_COUNT - 1) { // If the button is an app button
+        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(appsConfigBtnCount), configTexts[i], configCommandsList[i]));
+        appsConfigBtnCount++;
+      } else {
+        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(i), configTexts[i], configCommandsList[i]));
+      }
+    }
+    String out;
+    serializeJson(*doc, out);
+    Serial.println(out);
+  }
+}
+#endif
+
 void setup() {
+  #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) // Serial is only needed if debugging is enabled
   Serial.begin(9600); // Start serial
   while(!Serial); // Wait for serial
+  #endif
 
   setupWiFi();
   setupMQTT();
   setupBLE();
   
   // Set up pins
-	pinMode(PRESS_BTN, INPUT_PULLUP);
-	pinMode(UP_BTN, INPUT_PULLUP);
+  pinMode(PRESS_BTN, INPUT_PULLUP);
+  pinMode(UP_BTN, INPUT_PULLUP);
   pinMode(DOWN_BTN, INPUT_PULLUP);
   pinMode(LEFT_BTN, INPUT_PULLUP);
   pinMode(RIGHT_BTN, INPUT_PULLUP);
-	pinMode(WIO_KEY_A, INPUT_PULLUP);
-	pinMode(WIO_KEY_B, INPUT_PULLUP);
-	pinMode(WIO_KEY_C, INPUT_PULLUP);
+  pinMode(WIO_KEY_A, INPUT_PULLUP);
+  pinMode(WIO_KEY_B, INPUT_PULLUP);
+  pinMode(WIO_KEY_C, INPUT_PULLUP);
 
-	pinMode(MO_PIN, OUTPUT); 
+  pinMode(MO_PIN, OUTPUT); 
   
   pinMode(BUZZER_PIN, OUTPUT);
 
   // Initialize commands "map"
   for(uint8_t i = 0; i < BTN_COUNT; i++){
     commandMap[i].rawData = new uint16_t[0];
-	  commandMap[i].dataLength = 0;
+    commandMap[i].dataLength = 0;
   }
 
   // Screen setup
@@ -853,7 +993,7 @@ void setup() {
   tft.setRotation(SCREEN_ROTATION);
   tft.setTextDatum(MC_DATUM);
 
-	drawRemote();
+  drawRemote();
 }
 
 void loop() {
@@ -863,23 +1003,40 @@ void loop() {
 
   // Mode button logic
   bool modeBtnState = digitalRead(MODE_BTN);
-  if (modeBtnState != prevModeBtnState) {
+  if (modeBtnState != prevModeBtnState && !configMode) {
     if (modeBtnState == HIGH){
-		  switchMode();
+      switchMode();
     }
   }
-
   prevModeBtnState = modeBtnState;
 
-	if (receiveMode){
-		receive();
-	} else { // Detecting button presses
-    int pressed = getButtonPressedIndex();
+  #ifdef DEBUG_CONFIG_CREATOR
+  // Config button logic
+  bool configBtnState = digitalRead(CONFIG_REC_BTN);
+  if (configBtnState != prevConfigBtnState && !receiveMode) {
+    if (configBtnState == HIGH){
+      switchConfigMode();
+      completedConfigsCount = 0;
+    }
+  }
+  prevConfigBtnState = configBtnState;
+  #endif
 
+  if (receiveMode){
+    receive();
+  }
+  #ifdef DEBUG_CONFIG_CREATOR
+  else if (configMode){
+    receiveConfig();
+  } 
+  #endif
+  else { // Detecting button presses
+    int pressed = getButtonPressed();
+  
     if (pressed != -1) {
       const Command command = commandMap[pressed];
 
-			if (command.dataLength != 0){
+      if (command.dataLength != 0){
         emitData(command);
 
         startVibration(); // Vibrate after data sent
