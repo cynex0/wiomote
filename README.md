@@ -52,7 +52,25 @@ The team has considered the following sensors:
 | Vibration Motor (Grove - Vibration Motor)    | [link](https://wiki.seeedstudio.com/Grove-Vibration_Motor/)   |
 
 ## Instalation & Usage
-_To be added during Sprint 2_
+
+### Flashing WIO binaries
+
+1. Have [arduino-cli](https://github.com/arduino/arduino-cli) installed. _You can check your installation by running `arduino-cli version` in your shell._ _Use the following _[_resource_](https://arduino.github.io/arduino-cli/0.35/installation/)_ to help you install or fix issues with your current instalation._
+2. Download the compiled Arduino binary:
+3. Connect your WIO Terminal to a USB port and turn it on.
+4. In your shell, run `arduino-cli board list` to check which port the device is connected to.
+5. Flash the binary using: 
+```shell 
+arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_terminal -p <port identifier>
+```
+   * `<path to terminal.ino.bin>` - Replace this with the path to the binary file downloaded in step 1.
+   * `<port identifier>` - Replace this with the port displayed in step 3. Look for _FQBN Seeeduino:samd:seeed_wio_terminal_.
+
+### Installing Android app
+
+1. Download the compiled Android app:
+2. Run the downloaded file from your Android device. **NOTE:** Your device might request you to allow installation of unknown apps from unknown sources. This is normal and is required to install any third party application.
+
 
 ## Acknowledgments
 
