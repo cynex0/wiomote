@@ -1,18 +1,13 @@
 package se.gu.wiomote.application.activities.remote;
 
-import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -21,11 +16,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SnapHelper;
 
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
@@ -35,6 +29,7 @@ import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
+import se.gu.wiomote.utils.Dialogs;
 
 public class Remote extends DatabaseAccessActivity {
     static final String IR_SEND_TOPIC = "wiomote/ir/app";
@@ -137,57 +132,18 @@ public class Remote extends DatabaseAccessActivity {
                 if (addedCommandKeyCode != null && addedCommandKeyCode >= 0) {
                     int index = adapter.getItemCount();
 
-                    AtomicReference<Dialog> dialog = new AtomicReference<>(null);
-
-                    View root = getLayoutInflater().inflate(R.layout.label_dialog, null);
-
-                    EditText editText = root.findViewById(R.id.text);
-                    Button cancel = root.findViewById(R.id.cancel);
-                    Button save = root.findViewById(R.id.save);
-
-                    editText.addTextChangedListener(new TextWatcher() {
+                    Dialogs.requestInput(this, R.string.label, new Dialogs.OnConfirm() {
                         @Override
-                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                        public void onConfirm(String text) {
+                            Command command = config.getCommandForKeyCode(addedCommandKeyCode);
+                            command.label = text;
+
+                            getDatabase().update(type, config);
+
+                            adapter.addCustomCommand(command);
+                            adapter.notifyItemInserted(index);
                         }
-
-                        @Override
-                        public void onTextChanged(CharSequence s, int start, int before, int count) {
-                        }
-
-                        @Override
-                        public void afterTextChanged(Editable s) {
-                            save.setEnabled(s.length() > 0);
-                        }
-                    });
-
-                    cancel.setOnClickListener(v -> {
-                        config.removeCommand(index);
-
-                        if (dialog.get() != null) {
-                            dialog.get().dismiss();
-                        }
-                    });
-
-                    save.setOnClickListener(v -> {
-                        Command command = config.getCommandForKeyCode(addedCommandKeyCode);
-                        command.label = editText.getText().toString();
-
-                        getDatabase().update(type, config);
-
-                        adapter.addCustomCommand(command);
-                        adapter.notifyItemInserted(index);
-
-                        if (dialog.get() != null) {
-                            dialog.get().dismiss();
-                        }
-                    });
-
-
-                    dialog.set(new MaterialAlertDialogBuilder(this).setView(root)
-                            .setOnCancelListener(d -> config.removeCommand(index))
-                            .create());
-
-                    dialog.get().show();
+                    }, () -> config.removeCommand(index));
 
                     adapter.hideDialog();
                 } else {
@@ -247,6 +203,17 @@ public class Remote extends DatabaseAccessActivity {
 
             update = true;
         }
+    }
+
+    public static void createConfiguration(Database database, String name) {
+        Configuration configuration = new Configuration(java.util.UUID.randomUUID().toString(), name);
+
+        database.insert(ConfigurationType.CUSTOM, configuration);
+
+        type = ConfigurationType.CUSTOM;
+        uuid = configuration.uuid;
+
+        update = true;
     }
 
     public static boolean isLoaded(String uuidChecker) {

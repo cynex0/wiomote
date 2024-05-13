@@ -19,7 +19,7 @@ public class Configuration {
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
     private final Map<Integer, Command> commands;
-    private final String uuid;
+    public final String uuid;
     public String name;
 
     public Configuration(String uuid, String name,
@@ -35,10 +35,6 @@ public class Configuration {
 
     public Configuration(String uuid) {
         this(uuid, uuid);
-    }
-
-    public String getUUID() {
-        return uuid;
     }
 
     public boolean hasCommandForKeyCode(int keyCode) {

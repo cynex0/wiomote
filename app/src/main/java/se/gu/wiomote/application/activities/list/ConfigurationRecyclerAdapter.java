@@ -20,8 +20,10 @@ import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.activities.remote.Remote;
+import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
+import se.gu.wiomote.utils.Dialogs;
 
 public class ConfigurationRecyclerAdapter extends
         StickyAdapter<ConfigurationRecyclerAdapter.HeaderViewHolder, ConfigurationRecyclerAdapter.ViewHolder> {
@@ -104,46 +106,57 @@ public class ConfigurationRecyclerAdapter extends
                 activity.finish();
             });
 
-            if(ConfigurationType.CUSTOM.equals(types.get(position))) {
+            if (ConfigurationType.CUSTOM.equals(types.get(position))) {
                 itemViewHolder.delete.setVisibility(View.VISIBLE);
 
-                itemViewHolder.delete.setOnClickListener(v -> {
-                    database.remove(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
+                itemViewHolder.delete.setOnClickListener(v -> Dialogs.displayDeleteConfirmation(activity, new Dialogs.OnConfirm() {
+                    @Override
+                    public void onConfirm() {
+                        database.remove(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(position))), uuid);
 
-                    uuids.remove(position);
-                    types.remove(position);
-                    names.remove(position);
+                        uuids.remove(position);
+                        types.remove(position);
+                        names.remove(position);
 
-                    notifyItemRemoved(position);
-                    notifyItemRangeChanged(position, uuids.size() - position);
+                        notifyItemRemoved(position);
+                        notifyItemRangeChanged(position, uuids.size() - position);
 
-                    // Choose the next configuration automatically to avoid re-writing deleted config to the DB
-                    if(Remote.isLoaded(uuid)) {
-                        int nextConfig = getFirstValidConfigIndex();
-                        if (nextConfig >= 0) {
-                            Remote.updateConfiguration(ConfigurationType.valueOf(names.get(getHeaderPositionForItem(nextConfig))), uuids.get(nextConfig));
-                        } else {
-                            activity.finish();
+                        // Choose the next configuration automatically to avoid re-writing deleted config to the DB
+                        if (Remote.isLoaded(uuid)) {
+                            int nextConfig = getFirstValidConfigIndex();
+                            if (nextConfig >= 0) {
+                                Remote.updateConfiguration(
+                                        ConfigurationType.valueOf(
+                                                names.get(getHeaderPositionForItem(nextConfig))), uuids.get(nextConfig)
+                                );
+                            } else {
+                                activity.finish();
+                            }
                         }
                     }
-                });
+                }, null));
             } else {
                 itemViewHolder.delete.setVisibility(View.GONE);
             }
-        } else if (holder instanceof HeaderViewHolder){
+        } else if (holder instanceof HeaderViewHolder) {
             HeaderViewHolder headerViewHolder = (HeaderViewHolder) holder;
 
             holder.itemView.setOnLongClickListener(null);
 
-            if(ConfigurationType.CUSTOM.equals(types.get(position))) {
+            if (ConfigurationType.CUSTOM.equals(types.get(position))) {
                 headerViewHolder.add.setVisibility(View.VISIBLE);
 
                 headerViewHolder.add.setOnClickListener(v -> {
-                    String newUuid = UUID.randomUUID().toString();
-                    Remote.updateConfiguration(ConfigurationType.valueOf(name), newUuid);
-                    Log.i("TAG", "Creating new config " + name + newUuid);
+                    Dialogs.requestInput(activity, R.string.label, new Dialogs.OnConfirm() {
+                        @Override
+                        public void onConfirm(String text) {
+                            Remote.createConfiguration(database, text);
 
-                    activity.finish();
+                            Log.i("TAG", "Creating new config...");
+
+                            activity.finish();
+                        }
+                    }, null);
                 });
             } else {
                 headerViewHolder.add.setVisibility(View.GONE);
@@ -157,7 +170,7 @@ public class ConfigurationRecyclerAdapter extends
 
         holder.label.setText(name);
 
-        if(ConfigurationType.CUSTOM.equals(types.get(headerPosition))) {
+        if (ConfigurationType.CUSTOM.equals(types.get(headerPosition))) {
             holder.add.setVisibility(View.VISIBLE);
         } else {
             holder.add.setVisibility(View.GONE);
@@ -186,7 +199,7 @@ public class ConfigurationRecyclerAdapter extends
     }
 
     private int getFirstValidConfigIndex() {
-        if(uuids.isEmpty()) {
+        if (uuids.isEmpty()) {
             return -1;
         }
 
@@ -198,7 +211,7 @@ public class ConfigurationRecyclerAdapter extends
             }
 
             index = index + 1;
-        } while(index < getItemCount());
+        } while (index < getItemCount());
 
         return -1;
     }

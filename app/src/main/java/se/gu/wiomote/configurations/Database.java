@@ -34,7 +34,7 @@ public class Database {
 
     public void insert(ConfigurationType type, Configuration configuration) {
         ContentValues contentValue = new ContentValues();
-        contentValue.put(UUID.string, configuration.getUUID());
+        contentValue.put(UUID.string, configuration.uuid);
         contentValue.put(Columns.NAME.string, configuration.name);
         contentValue.put(COMMANDS.string, configuration.serializeConfig());
 
@@ -90,7 +90,7 @@ public class Database {
         contentValues.put(COMMANDS.string, configuration.serializeConfig());
 
         return database.update(type.getTableName(), contentValues,
-                UUID + "=?", new String[]{configuration.getUUID()}) > 0;
+                UUID + "=?", new String[]{configuration.uuid}) > 0;
     }
 
     public void remove(ConfigurationType type, String uuid) {

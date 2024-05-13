@@ -1,5 +1,6 @@
 package se.gu.wiomote.application.activities.remote;
 
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,6 +21,8 @@ import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
+import se.gu.wiomote.utils.Dialogs;
+import se.gu.wiomote.utils.Utils;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
     private static final String REQUEST_CLONING_TOPIC = "wiomote/request/clone";
@@ -72,7 +75,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         if (holder.viewType == CUSTOM_BUTTON) {
             Command command = commands.get(position);
 
@@ -83,42 +86,22 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                         configuration.serializeCommand(position, true).getBytes()));
 
                 holder.itemView.setOnLongClickListener(view -> {
-                    AtomicReference<Dialog> dialog = new AtomicReference<>(null);
+                    Dialogs.displayDeleteConfirmation(activity, new Dialogs.OnConfirm() {
+                        @Override
+                        public void onConfirm() {
+                            configuration.removeCommand(position);
 
-                    View root = activity.getLayoutInflater().inflate(R.layout.remove_dialog, null);
+                            activity.getDatabase()
+                                    .update(type, configuration);
 
-                    Button cancel = root.findViewById(R.id.cancel);
-                    Button remove = root.findViewById(R.id.remove);
+                            int index = commands.indexOf(command);
 
-                    cancel.setOnClickListener(v -> {
-                        if (dialog.get() != null) {
-                            dialog.get().dismiss();
+                            if (index >= 0) {
+                                commands.remove(index);
+                                notifyItemRemoved(index);
+                            }
                         }
-                    });
-
-                    remove.setOnClickListener(v -> {
-                        configuration.removeCommand(position);
-
-                        activity.getDatabase()
-                                .update(type, configuration);
-
-                        int index = commands.indexOf(command);
-
-                        if (index >= 0) {
-                            commands.remove(index);
-                            notifyItemRemoved(index);
-                        }
-
-                        if (dialog.get() != null) {
-                            dialog.get().dismiss();
-                        }
-                    });
-
-                    dialog.set(new MaterialAlertDialogBuilder(activity)
-                            .setView(root)
-                            .create());
-
-                    dialog.get().show();
+                    }, null);
 
                     return true;
                 });
