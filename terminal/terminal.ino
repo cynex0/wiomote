@@ -677,6 +677,7 @@ void drawBltConnectionIcon(){
 
 void emitData(const Command& command){
   if (command.rawData != nullptr){
+	if(command.dataLength == 0) return; // command is empty, do nothing
     emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
     drawEmitSignal();
 
