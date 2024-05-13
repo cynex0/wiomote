@@ -869,6 +869,7 @@ void receive() {
       if (!mappingToCustomButton) {
         recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
         commandMap[chosenButton] = recCommand; // Write the received command to the map
+      }
       else {
         recCommand = {rawData, dataLength, chosenButton};
       }
@@ -1031,7 +1032,7 @@ void loop() {
   } 
   #endif
   else { // Detecting button presses
-    int pressed = getButtonPressed();
+    int pressed = getButtonPressedIndex();
   
     if (pressed != -1) {
       const Command command = commandMap[pressed];

@@ -27,4 +27,9 @@ public class ConfigurationList extends DatabaseAccessActivity {
 
         new StickyHeaderItemDecorator(adapter).attachToRecyclerView(recycler);
     }
+
+    @Override
+    public int getStringResourceId() {
+        return R.string.connection_lost;
+    }
 }

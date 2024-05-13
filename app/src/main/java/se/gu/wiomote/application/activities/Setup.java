@@ -42,7 +42,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.activities.remote.Remote;
+import se.gu.wiomote.application.activities.remote.Remote;
 import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.network.WioBluetoothGattCallback;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;

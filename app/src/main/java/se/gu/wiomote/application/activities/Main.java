@@ -7,7 +7,7 @@ import android.os.Handler;  // Handler for timer.
 import androidx.appcompat.app.AppCompatActivity;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.activities.remote.Remote;
+import se.gu.wiomote.application.activities.remote.Remote;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
 
 public class Main extends AppCompatActivity {

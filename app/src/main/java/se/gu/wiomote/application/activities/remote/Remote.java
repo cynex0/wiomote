@@ -195,6 +195,11 @@ public class Remote extends DatabaseAccessActivity {
         super.onStop();
     }
 
+    @Override
+    public int getStringResourceId() {
+        return R.string.go_to_setup;
+    }
+
     public static void updateConfiguration(ConfigurationType newType, String newUuid) {
         if (newType != null && newUuid != null &&
                 (!newType.equals(type) || !newUuid.equals(uuid))) {
