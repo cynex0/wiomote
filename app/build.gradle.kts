@@ -53,8 +53,10 @@ android {
 
 dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.readystatesoftware.sqliteasset:sqliteassethelper:2.0.1")
+    implementation("com.github.shuhart:stickyheader:1.1.0")
     implementation("com.github.rubensousa:gravitysnaphelper:2.2.2")
-    implementation("com.google.android.material:material:1.12.0-rc01")
+    implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.hivemq:hivemq-mqtt-client:1.3.3")

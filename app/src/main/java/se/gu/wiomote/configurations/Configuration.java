@@ -8,121 +8,194 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Configuration {
     private static final String TAG = "Configuration";
-    private static final String UUID_KEY = "uuid";
-    private static final String NAME_KEY = "name";
-    private static final String COMMANDS_KEY = "commands";
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
-    private final String uuid;
     private final Map<Integer, Command> commands;
+    public final String uuid;
     public String name;
 
-    private Configuration(String uuid, @NonNull String name,
-                          @NonNull Map<Integer, Command> commands) {
+    public Configuration(String uuid, String name,
+                         @NonNull Map<Integer, Command> commands) {
         this.uuid = uuid;
         this.name = name;
         this.commands = commands;
     }
 
-    private Configuration(String uuid, @NonNull String name, @NonNull JSONArray commands) {
-        this(uuid, name, toCommandMap(commands));
-    }
-
     public Configuration(String uuid, String name) {
-        this(uuid, name, new HashMap<>());
+        this(uuid, name, new LinkedHashMap<>());
     }
 
     public Configuration(String uuid) {
         this(uuid, uuid);
     }
 
-    public String getUUID() {
-        return uuid;
+    public boolean hasCommandForKeyCode(int keyCode) {
+        return commands.containsKey(keyCode);
     }
 
     public Command getCommandForKeyCode(int keyCode) {
-        return commands.getOrDefault(keyCode, null);
+        return commands.get(keyCode);
     }
 
-    public void addCommand(int keyCode, Command command) {
-        commands.put(keyCode, command);
+    public int getButtonCount() {
+        return commands.size();
     }
 
-
-    /* JSON Format (prettified):
-    {
-      "uuid" : "...",
-      "name" : "...",
-      "commands" : [
-        {
-          "keyCode" : <number>,
-          "command" :
-            {
-              "label" : "...",
-              "dataLength" : <length>,
-              "rawData" : [ <byte0>, ...]
-            }
-        }
-      ]
-    }
+    /**
+     * Add command to command map from existing JSON String instance
+     *
+     * @param jsonString valid JSON object string representation
+     * @return keyCode of the added command
      */
-    public String serializeJSON() {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append("{")
-                .append("\"" + UUID_KEY + "\":\"").append(uuid).append("\",") // "uuid":"<uuid>",
-                .append("\"" + NAME_KEY + "\":\"").append(uuid).append("\",") // "name":"<name>",
-                .append("\"" + COMMANDS_KEY + "\":["); // "commands":[
-
-        commands.forEach((keyCode, command) -> {
-            builder.append("{")
-                    .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<number>,
-                    .append("\"" + COMMAND_KEY + "\":") // "command":
-                    .append(command.serializeJSON()) // (see Command.java)
-                    .append(",");
-        });
-
-        if (!commands.isEmpty()) builder.deleteCharAt(builder.length() - 1); // Delete trailing comma if at least 1 command is present
-        builder.append("]}");
-
-        Log.i(TAG, "serializeJSON: " + builder);
-        return builder.toString();
-    }
-
-    public static Configuration deserializeJSON(String jsonString) {
+    public Integer addCommand(@NonNull String jsonString) {
         try {
             JSONObject jsonObject = new JSONObject(jsonString);
 
-            return new Configuration(jsonObject.getString(UUID_KEY),
-                    jsonObject.getString(NAME_KEY),
-                    jsonObject.getJSONArray(COMMANDS_KEY));
-        } catch (JSONException exception) {
-            Log.e(TAG, "deserialize: Malformed configuration.");
+            Command command = Command.deserialize(jsonObject.getJSONObject(COMMAND_KEY));
+            int keyCode = jsonObject.getInt(KEYCODE_KEY);
+
+            commands.put(keyCode, command);
+
+            return keyCode;
+        } catch (JSONException e) {
+            Log.e(TAG, "deserialize: Malformed command.");
 
             return null;
         }
     }
 
-    private static Map<Integer, Command> toCommandMap(JSONArray array) {
-        Map<Integer, Command> map = new HashMap<>();
+    public void removeCommand(int keyCode) {
+        commands.remove(keyCode);
+    }
 
-        for(int index = 0; index < array.length(); index++) {
-            try {
-                JSONObject entry = array.getJSONObject(index);
+    /**
+     * Deserialize a list of commands
+     *
+     * @param jsonString valid JSON object string representation
+     */
+    public static LinkedHashMap<Integer, Command> deserializeCommands(String jsonString) {
+        try {
+            JSONArray array = new JSONArray(jsonString);
+            LinkedHashMap<Integer, Command> map = new LinkedHashMap<>();
 
-                map.put(entry.getInt(KEYCODE_KEY),
-                        Command.deserializeJSON((entry.getJSONObject(COMMAND_KEY))));
-            } catch (Exception exception) {
-                Log.e(TAG, "deserialize: Malformed command - skipping...");
+            for (int index = 0; index < array.length(); index++) {
+                try {
+                    JSONObject entry = array.getJSONObject(index);
+
+                    map.put(entry.getInt(KEYCODE_KEY),
+                            Command.deserialize((entry.getJSONObject(COMMAND_KEY))));
+                } catch (Exception exception) {
+                    Log.e(TAG, "deserialize: Malformed command - skipping...");
+                }
+            }
+
+            return map;
+        } catch (JSONException exception) {
+            Log.e(TAG, "deserialize: Malformed configuration.");
+        }
+
+        return null;
+    }
+
+    /*
+    {
+        "keyCode": <keyCode>,
+        "command": {
+            "label" : "...",              // can be omitted when sending to the terminal
+            "dataLength" : <length>,
+            "rawData" : [ <byte0>, ...]
+        }
+    }
+    */
+    public String serializeCommand(int keyCode, boolean omitLabel) {
+        StringBuilder builder = new StringBuilder();
+        Command command = commands.getOrDefault(keyCode, null);
+
+        builder.append("{")
+                .append("\"" + KEYCODE_KEY + "\":").append(keyCode).append(",") // "keyCode":<keyCode>,
+                .append("\"" + COMMAND_KEY + "\":"); // "command":
+
+        if (command != null) builder.append(command.serialize(omitLabel)); // (see Command.java)
+        builder.append("}");
+
+        return builder.toString();
+    }
+
+    public String serializeConfig() {
+        return serializeConfig(false);
+    }
+
+    public String serializeConfig(boolean omitLabels) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("[");
+
+        boolean hasAtLeastOneItem = false;
+
+        for (Map.Entry<Integer, Command> entry : commands.entrySet()) {
+            Integer keyCode = entry.getKey();
+
+            String serialCommand = serializeCommand(keyCode, omitLabels);
+
+            if (serialCommand != null) {
+                if (hasAtLeastOneItem) {
+                    builder.append(",");
+                }
+
+                builder.append(serialCommand);
+
+                hasAtLeastOneItem = true;
             }
         }
 
-        return map;
+        builder.append("]");
+
+        return builder.toString();
+    }
+
+    public List<Command> getCustomCommands() {
+        List<Command> commands = new ArrayList<>();
+
+        for (Map.Entry<Integer, Command> entry : this.commands.entrySet()) {
+            if (entry.getKey() >= 0) {
+                commands.add(entry.getValue());
+            }
+        }
+
+        return commands;
+    }
+
+    private boolean commandsEqual(Map<Integer, Command> otherCommands) {
+        if (this.commands.size() != otherCommands.size()) return false;
+
+        Iterator<Map.Entry<Integer, Command>> iterator = commands.entrySet().iterator();
+        Iterator<Map.Entry<Integer, Command>> otherIterator = otherCommands.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Command> entry = iterator.next();
+            Map.Entry<Integer, Command> otherEntry = otherIterator.next();
+
+            if (!entry.equals(otherEntry)) return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        if (!(o instanceof Configuration)) return false;
+
+        Configuration other = (Configuration) o;
+
+        return commandsEqual(other.commands) ||
+                name.equals(other.name);
     }
 }
