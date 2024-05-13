@@ -4,6 +4,20 @@
 \
 A wireless controlled configurable remote built on the [WIO Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html).
 
+## Table of Contents
+
+- [WIOmote](#wiomote)
+	- [Table of Contents](#table-of-contents)
+	- [Project Description](#project-description)
+	- [System Design](#system-design)
+	- [Dependencies \& Requirements](#dependencies--requirements)
+	- [System Sensors](#system-sensors)
+	- [Instalation \& Usage](#instalation--usage)
+		- [Flashing WIO binaries](#flashing-wio-binaries)
+		- [Installing Android app](#installing-android-app)
+	- [Acknowledgments](#acknowledgments)
+	- [License](#license)
+
 ## Project Description
 
 The project is named “*WIOmote*”, symbolizes the integration of the Wio Seed Terminal as the core device with the functionality of a remote, representing the product's purpose. 
