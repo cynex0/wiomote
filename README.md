@@ -16,6 +16,7 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 		- [Flashing WIO binaries](#flashing-wio-binaries)
 		- [Installing Android app](#installing-android-app)
 	- [Acknowledgments](#acknowledgments)
+        - [Team members and contributions](#team-members-and-contributions)
 	- [License](#license)
 
 ## Project Description
@@ -43,6 +44,7 @@ The following section lists the dependencies and requirements for the project:
 
 1. [Wio Seeed Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html)
 2. [Arduino IDE](https://www.arduino.cc/en/software) 
+   
    2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE):
    - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
    - [Arduino Json](https://arduinojson.org/)
@@ -96,6 +98,12 @@ The project is being built on:
 
 - [WIO Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html) platform developed by [Seeed Studio](https://www.seeedstudio.com/).
 - [Android Open Source Project (AOSP)](https://source.android.com/) using the [Android Software Development Kit (SDK)](https://developer.android.com/studio).
+
+### Team members and contributions
+- Aliaksei Khval (@aliaksei): Terminal MQTT connection, on-screen feedback for connection status, populated the configuration database including the creation of cloning scripts.
+- Maksims Orlovs (@orlovs): Android MQTT connection, terminal action flow, cloning behavior and data transfer between components.
+- Răzvan Albu (@razvana): Android application design and logic, database implementation and pipelines.
+- Victoria Rönnlid (@ronnlid): Terminal UI, visual, audio and haptic feedback.
 
 ## License
 The project is licensed under the *MIT License*. Refer to the [LICENSE](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/blob/main/LICENSE?ref_type=heads) file for more information.
