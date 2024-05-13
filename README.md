@@ -1,5 +1,5 @@
 # WIOmote
-[![GitLab Wiki Badge](https://img.shields.io/badge/GitLab-Wiki-d94a34.svg?logo=gitlab)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote.wiki.git) [![GitLab Pipeline Badge](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/badges/main/pipeline.svg)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs) [![Download Latest Artifact](https://img.shields.io/badge/Download-APK-d94a34.svg?logo=android&logoColor=white&color=green)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/app/build/outputs/apk/release/app-release.apk?job=build_android)
+[![GitLab Wiki Badge](https://img.shields.io/badge/GitLab-Wiki-d94a34.svg?logo=gitlab)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote.wiki.git) [![GitLab Pipeline Badge](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/badges/main/pipeline.svg)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs) [![Download Latest Artifact](https://img.shields.io/badge/Download-APK-d94a34.svg?logo=android&logoColor=white&color=green)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/app/build/outputs/apk/release/app-release.apk?job=build_android) [![Download Latest Arduino Binary](https://img.shields.io/badge/Download-Binary-d94a34.svg?logo=arduino&logoColor=white&color=blue)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/terminal/build/output/terminal.ino.bin?job=build_arduino)
 \
 \
 A wireless controlled configurable remote built on the [WIO Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html).
@@ -28,17 +28,21 @@ The system's architecture is based on an *MQTT Broker* alongside various hardwar
 The following section lists the dependencies and requirements for the project:
 
 1. [Wio Seeed Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html)
-2. [Arduino IDE](https://www.arduino.cc/en/software)
-
-    2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE).
-    - [Wio Terminal Board Library](https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json)
-    - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
-    - [Arduino Json](https://arduinojson.org/)
-    - [PubSubClient](https://github.com/knolleary/pubsubclient)
-    - [Seeed Arduino rpcBLE](https://github.com/Seeed-Studio/Seeed_Arduino_rpcBLE)
-    - [Seeed Arduino rpcWiFi](https://github.com/Seeed-Studio/Seeed_Arduino_rpcWiFi)
-    - [WIOmote IRLib](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote_irlib)
-3. [Grove Sensor List](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/wikis/home#system-sensors)
+2. [Arduino IDE](https://www.arduino.cc/en/software) 
+   2.1. Arduino Libraries — Add to Arduino IDE using the [Arduino Library Manager](https://support.arduino.cc/hc/en-us/articles/5145457742236-Add-libraries-to-Arduino-IDE):
+   - [TFT_eSPI](https://github.com/Bodmer/TFT_eSPI)
+   - [Arduino Json](https://arduinojson.org/)
+   - [PubSubClient](https://github.com/knolleary/pubsubclient)
+   - [Seeed Arduino rpcBLE](https://github.com/Seeed-Studio/Seeed_Arduino_rpcBLE)
+   - [Seeed Arduino rpcWiFi](https://github.com/Seeed-Studio/Seeed_Arduino_rpcWiFi)
+   - [Seeed Arduino rpcUnified](https://github.com/Seeed-Studio/Seeed_Arduino_rpcUnified)
+   - [WIOmote IRLib](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote_irlib)
+   
+   2.2. Arduino Board Managers - Add to Arduino IDE by going to `File > Preferences` and pasting the following link into `Aditional Board Managers URLs`:
+```shell
+https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
+```
+3. [Grove Sensor List](#system-sensors)
 
 ## System Sensors
 
@@ -56,7 +60,7 @@ The team has considered the following sensors:
 ### Flashing WIO binaries
 
 1. Have [arduino-cli](https://github.com/arduino/arduino-cli) installed. _You can check your installation by running `arduino-cli version` in your shell._ _Use the following _[_resource_](https://arduino.github.io/arduino-cli/0.35/installation/)_ to help you install or fix issues with your current instalation._
-2. Download the compiled Arduino binary:
+2. Download the compiled Arduino binary: [![Download Latest Arduino Binary](https://img.shields.io/badge/Download-Binary-d94a34.svg?logo=arduino&logoColor=white&color=blue)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/terminal/build/output/terminal.ino.bin?job=build_arduino)
 3. Connect your WIO Terminal to a USB port and turn it on.
 4. In your shell, run `arduino-cli board list` to check which port the device is connected to.
 5. Flash the binary using: 
@@ -68,7 +72,7 @@ arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_ter
 
 ### Installing Android app
 
-1. Download the compiled Android app:
+1. Download the compiled Android app: [![Download Latest APK](https://img.shields.io/badge/Download-APK-d94a34.svg?logo=android&logoColor=white&color=green)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/app/build/outputs/apk/release/app-release.apk?job=build_android)
 2. Run the downloaded file from your Android device. **NOTE:** Your device might request you to allow installation of unknown apps from unknown sources. This is normal and is required to install any third party application.
 
 
