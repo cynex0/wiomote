@@ -30,6 +30,6 @@ public class ConfigurationList extends DatabaseAccessActivity {
 
     @Override
     public int getStringResourceId() {
-        return R.string.connection_lost;
+        return R.string.go_to_setup;
     }
 }

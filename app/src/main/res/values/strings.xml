@@ -13,9 +13,12 @@
     <string name="network_connection">Please connect to the Wi-Fi network the terminal should use ↗</string>
     <string name="bluetooth">Bluetooth</string>
     <string name="bluetooth_connection">Bluetooth needed to connect to the terminal ↗</string>
-    <string name="location">Location needed to connect the terminal ↗</string>
+    <string name="bluetooth_connection_enforce">Allow Bluetooth access in settings to connect to the terminal when offline.</string>
+    <string name="location">Precise location needed to connect the terminal ↗</string>
+    <string name="location_enforce">Allow precise location access in settings to retrieve WiFi data.</string>
     <string name="connection_lost">Terminal not connected</string>
     <string name="go_to_setup">Connection lost. Go to Setup ↗</string>
+    <string name="go_to_settings">Go to Settings ↗</string>
     <string name="configurations">Configurations</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>

@@ -46,6 +46,7 @@ import se.gu.wiomote.application.activities.remote.Remote;
 import se.gu.wiomote.network.WiFiHandler;
 import se.gu.wiomote.network.WioBluetoothGattCallback;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
+import se.gu.wiomote.utils.Dialogs;
 import se.gu.wiomote.views.ListeningButton;
 
 public class Setup extends NotificationTrayActivity {
@@ -66,6 +67,7 @@ public class Setup extends NotificationTrayActivity {
     private TextView ssid;
     private String bssid;
     private EditText password;
+    private boolean stopped;
 
     @SuppressLint({"Recycle"})
     @Override
@@ -113,6 +115,7 @@ public class Setup extends NotificationTrayActivity {
                                 locationButton.performClick();
                             } else {
                                 locationButton.setEnabled(true);
+                                Dialogs.requestPermissionFromSettings(this, R.string.location_enforce);
                             }
                         }
                 );
@@ -143,14 +146,17 @@ public class Setup extends NotificationTrayActivity {
 
                     if (Boolean.TRUE.equals(bluetoothConnectGranted) &&
                             Boolean.TRUE.equals(bluetoothScanGranted)) {
-                        startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
+                        bluetoothEnableRequest.launch(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
+                    } else {
+                        bluetoothButton.setEnabled(true);
+                        Dialogs.requestPermissionFromSettings(this, R.string.bluetooth_connection_enforce);
                     }
                 }) : null;
 
         bluetoothEnableRequest = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
                 result -> bluetoothButton.setEnabled(result.getResultCode() != Activity.RESULT_OK));
 
-        bluetoothButton.setOnClickListener(v -> requestLocationService());
+        bluetoothButton.setOnClickListener(v -> requestLocationService()); // request location again to make sure it was not turned off
 
         bluetoothCallback = new WioBluetoothGattCallback(this,
                 new WioBluetoothGattCallback.OnConnectionChange() {
@@ -190,17 +196,27 @@ public class Setup extends NotificationTrayActivity {
             public void onWiFiConnected(WifiInfo info) {
                 if (info != null) {
                     ssid.setText(info.getSSID().replace("\"", ""));
-                    bssid = info.getBSSID();
+
+                    if (info.getBSSID() != null &&
+                            info.getBSSID().equals(bssid)) {
+                        bssid = info.getBSSID();
+
+                        password.setText("");
+                    }
 
                     networkInfo.setVisibility(View.VISIBLE);
                 } else {
                     networkInfo.setVisibility(View.GONE);
+
+                    password.setText("");
                 }
             }
 
             @Override
             public void onWiFiDisconnected() {
                 networkInfo.setVisibility(View.GONE);
+
+                password.setText("");
             }
         };
 
@@ -334,8 +350,21 @@ public class Setup extends NotificationTrayActivity {
     }
 
     @Override
-    public int getStringResourceId() {
-        return R.string.connection_lost;
+    protected void onStop() {
+        stopped = true;
+
+        super.onStop();
+    }
+
+    @Override
+    protected void onResume() {
+        if (stopped) {
+            locationButton.performClick();
+
+            stopped = false;
+        }
+
+        super.onResume();
     }
 
     @Override
@@ -343,5 +372,10 @@ public class Setup extends NotificationTrayActivity {
         bluetoothCallback.unregister();
 
         super.onDestroy();
+    }
+
+    @Override
+    public int getStringResourceId() {
+        return R.string.connection_lost;
     }
 }
