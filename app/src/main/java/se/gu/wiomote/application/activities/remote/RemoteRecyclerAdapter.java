@@ -50,6 +50,13 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                 .setOnDismissListener(dialog ->
                         WioMQTTClient.publish(REQUEST_MODE_TOPIC, "EMIT".getBytes()))
                 .create();
+
+        WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+            @Override
+            public void onExitedCloningMode() {
+                waitingDialog.dismiss();
+            }
+        });
     }
 
     @NonNull
@@ -69,13 +76,6 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                         ("CLONE" + commands.size()).getBytes());
 
                 waitingDialog.show();
-
-                WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
-                    @Override
-                    public void onExitedCloningMode() {
-                        waitingDialog.dismiss();
-                    }
-                });
             });
         }
 
