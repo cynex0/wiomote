@@ -18,7 +18,7 @@
 
 // Debugging modes
 //#define DEBUG_UI    // additional UI elements
-//#define DEBUG_LOG   // log events to serial
+#define DEBUG_LOG   // log events to serial
 //#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 #define MQTT_PING  // send "ping"s and receive "pong"s
 
@@ -103,7 +103,7 @@
 #define TOPIC_IR_IN                 "wiomote/ir/app"
 #define TOPIC_IR_OUT           "wiomote/ir/terminal"
 #define TOPIC_CURRENT_MODE            "wiomote/mode"
-#define TOPIC_SWITCH_MODE    "wiomote/request/clone"
+#define TOPIC_SWITCH_MODE     "wiomote/mode/request"
 
 #ifdef MQTT_PING
 #define MQTT_PING_INTERVAL 1000
@@ -327,12 +327,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
-    if (!receiveMode) {
-      switchMode();
+    if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
+      if (!receiveMode) {
+        switchMode();
+      } 
+      chosenButton = atoi(buff_p + 5); // skip 5 characters ("CLONE") to get the keyCode
+      chosenFromApp = true;
+      mappingToCustomButton = true;
     }
-    chosenButton = atoi(buff_p);
-    chosenFromApp = true;
-    mappingToCustomButton = true;
+    else if (strcmp(buff_p, "EMIT") == 0) { // emit mode requested
+      if (receiveMode) {
+        switchMode();
+      }
+    }
   }
 }
 
