@@ -53,6 +53,13 @@ public class CircleConstraintLayout extends ConstraintLayout {
     }
 
     @Override
+    public void draw(@NonNull Canvas canvas) {
+        canvas.clipPath(path);
+
+        super.draw(canvas);
+    }
+
+    @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         canvas.clipPath(path);
 
