@@ -75,6 +75,23 @@ public class Remote extends DatabaseAccessActivity {
         basicButtonMap.put(-5, left);
         basicButtonMap.put(-6, ok);
 
+        // Set listener to update the DB every time the terminal exits cloning mode and the config changes
+        WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+            private Configuration prevConfig;
+
+            @Override
+            public void onEnteredCloningMode() {
+                prevConfig = config;
+            }
+
+            @Override
+            public void onExitedCloningMode() {
+                if (config != null && !config.equals(prevConfig)) {
+                    getDatabase().update(type, config);
+                }
+            }
+        });
+
         updateLayout();
     }
 
@@ -154,24 +171,6 @@ public class Remote extends DatabaseAccessActivity {
             SnapHelper snapHelper = new GravitySnapHelper(Gravity.START);
             snapHelper.attachToRecyclerView(recyclerView);
         }
-
-
-        // Set listener to update the DB every time the terminal exits cloning mode and the config changes
-        WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
-            private Configuration prevConfig;
-
-            @Override
-            public void onEnteredCloningMode() {
-                prevConfig = config;
-            }
-
-            @Override
-            public void onExitedCloningMode() {
-                if (config != null && !config.equals(prevConfig)) {
-                    getDatabase().update(type, config);
-                }
-            }
-        });
     }
 
     @Override
@@ -193,6 +192,13 @@ public class Remote extends DatabaseAccessActivity {
                 .apply(); // save current config to SharedPreferences to keep selection on next launch
 
         super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        WioMQTTClient.removeTerminalModeListeners();
+
+        super.onDestroy();
     }
 
     @Override

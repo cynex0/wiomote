@@ -12,6 +12,7 @@ import com.hivemq.client.mqtt.mqtt3.message.subscribe.suback.Mqtt3SubAck;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -47,7 +48,7 @@ public class WioMQTTClient {
 
     private static WioMQTTClient.OnConnectionStatusChanged connectionListener = null;
     private static CommandReceivedListener commandListener = null;
-    private static TerminalModeListener terminalModeListener = null;
+    private static ArrayList<TerminalModeListener> terminalModeListeners = new ArrayList<>();
     private static ConnectionStatus state = ConnectionStatus.UNKNOWN;
     private static boolean ready = false;
 
@@ -79,8 +80,12 @@ public class WioMQTTClient {
                                 }).thenCompose(mqtt3SubAck -> {
                                     return subscribe(TERMINAL_MODE_TOPIC, payload -> {
                                         String mode = new String(payload.getPayloadAsBytes());
-                                        if ("EMIT".equals(mode)) terminalModeListener.onExitedCloningMode();
-                                        else if ("CLONE".equals(mode)) terminalModeListener.onEnteredCloningMode();
+                                        for (TerminalModeListener listener : terminalModeListeners) {
+                                            if ("EMIT".equals(mode))
+                                                listener.onExitedCloningMode();
+                                            else if ("CLONE".equals(mode))
+                                                listener.onEnteredCloningMode();
+                                        }
                                     });
                                 }).thenCompose(subAck -> {
                                     return publish(CONN_OUT_TOPIC, "App connected!".getBytes()); // return a publish future
@@ -160,8 +165,12 @@ public class WioMQTTClient {
         commandListener = listener;
     }
 
-    public static void setTerminalModeListener(TerminalModeListener listener) {
-        terminalModeListener = listener;
+    public static void addTerminalModeListener(TerminalModeListener listener) {
+        terminalModeListeners.add(listener);
+    }
+
+    public static void removeTerminalModeListeners() {
+        terminalModeListeners.clear();
     }
 
     public interface OnConnectionStatusChanged {
@@ -175,7 +184,7 @@ public class WioMQTTClient {
     }
 
     public interface TerminalModeListener {
-        void onEnteredCloningMode();
-        void onExitedCloningMode();
+        default void onEnteredCloningMode(){};
+        default void onExitedCloningMode(){};
     }
 }
