@@ -169,6 +169,10 @@ public class WioMQTTClient {
         terminalModeListeners.add(listener);
     }
 
+    public static void removeTerminalModeListeners() {
+        terminalModeListeners.clear();
+    }
+
     public interface OnConnectionStatusChanged {
         void onConnected();
 

@@ -195,6 +195,13 @@ public class Remote extends DatabaseAccessActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        WioMQTTClient.removeTerminalModeListeners();
+
+        super.onDestroy();
+    }
+
+    @Override
     public int getStringResourceId() {
         return R.string.go_to_setup;
     }
