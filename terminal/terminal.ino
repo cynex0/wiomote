@@ -326,6 +326,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       chosenButton = -1 * (command.keyCode + 1);
       chosenFromApp = true;
     }
+    delete[] command.rawData;
   }
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
@@ -342,6 +343,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       }
     }
   }
+
+  delete[] buff_p;
 }
 
 void setupMQTT() {
@@ -818,29 +821,14 @@ void switchConfigMode(){ // Switches between config mode and normal mode
 }
 #endif
 
-bool canMapButtons() {
-  for (uint8_t i = 0; i < BTN_COUNT; i++) {
-    if (commandMap[i].dataLength == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void receive() {
-	if (!canMapButtons()) {
-		switchMode();
-		return;
-	}
-
   int pressedButton = getButtonPressedIndex();
   if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
     if(!chosenFromApp) chosenButton = pressedButton;
     tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
     
     tft.setTextSize(TEXT_SIZE_M);
-    char message[16];
+    char message[16]; // Max length: 16 = 10 (" selected!") + 6 ("CUSTOM")
     sprintf(message, "%s selected!", mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
     tft.drawString(message, CENTER_X, CENTER_Y);
     
@@ -870,13 +858,16 @@ void receive() {
       Command recCommand;
       if (!mappingToCustomButton) {
         recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
+        delete[] commandMap[chosenButton].rawData; // delete the previously stored data
         commandMap[chosenButton] = recCommand; // Write the received command to the map
       }
       else {
         recCommand = {rawData, dataLength, chosenButton};
       }
       
-      mqttPublishWithLog(TOPIC_IR_OUT, serializeCommand(recCommand));
+      const char* jsonCommand = serializeCommand(recCommand);
+      mqttPublishWithLog(TOPIC_IR_OUT, jsonCommand);
+      delete[] jsonCommand;
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
       drawReceiveSignal();
@@ -884,7 +875,7 @@ void receive() {
       drawRemote(); // Reset the UI
 
       // Reset logic variables
-      if (mappingToCustomButton) switchMode();
+      if (mappingToCustomButton) switchMode(); // don't continue cloning if mapping to a custom button
       mappingToCustomButton = false;
       chosenButton = -1;
     }
