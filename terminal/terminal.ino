@@ -326,6 +326,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       chosenButton = -1 * (command.keyCode + 1);
       chosenFromApp = true;
     }
+    delete[] command.rawData;
   }
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
@@ -342,6 +343,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       }
     }
   }
+
+  delete[] buff_p;
 }
 
 void setupMQTT() {
@@ -876,7 +879,9 @@ void receive() {
         recCommand = {rawData, dataLength, chosenButton};
       }
       
-      mqttPublishWithLog(TOPIC_IR_OUT, serializeCommand(recCommand));
+      const char* jsonCommand = serializeCommand(recCommand);
+      mqttPublishWithLog(TOPIC_IR_OUT, jsonCommand);
+      delete[] jsonCommand;
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
       drawReceiveSignal();
@@ -884,7 +889,7 @@ void receive() {
       drawRemote(); // Reset the UI
 
       // Reset logic variables
-      if (mappingToCustomButton) switchMode();
+      if (mappingToCustomButton) switchMode(); // don't continue cloning if mapping to a custom button
       mappingToCustomButton = false;
       chosenButton = -1;
     }
