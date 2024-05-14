@@ -2,12 +2,9 @@ package se.gu.wiomote.application.activities.remote;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.app.SearchManager;
-import android.content.DialogInterface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -16,7 +13,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.configurations.Command;
@@ -24,12 +20,13 @@ import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
 import se.gu.wiomote.utils.Dialogs;
-import se.gu.wiomote.utils.Utils;
 
 public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAdapter.ViewHolder> {
     private static final String REQUEST_MODE_TOPIC = "wiomote/mode/request";
     private static final int ADD_BUTTON = 1;
     private static final int CUSTOM_BUTTON = 2;
+    private static final String EMIT_MODE = "EMIT";
+    private static final String CLONE_MODE = "CLONE";
     private final Configuration configuration;
     private final ConfigurationType type;
     private final List<Command> commands;
@@ -46,9 +43,9 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                 .setView(activity.getLayoutInflater().inflate(R.layout.waiting_dialog, null))
                 .setCancelable(true)
                 .setOnCancelListener(dialog ->
-                        WioMQTTClient.publish(REQUEST_MODE_TOPIC, "EMIT".getBytes()))
+                        WioMQTTClient.publish(REQUEST_MODE_TOPIC, EMIT_MODE.getBytes()))
                 .setOnDismissListener(dialog ->
-                        WioMQTTClient.publish(REQUEST_MODE_TOPIC, "EMIT".getBytes()))
+                        WioMQTTClient.publish(REQUEST_MODE_TOPIC, EMIT_MODE.getBytes()))
                 .create();
 
         WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
@@ -73,7 +70,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
             itemView.setOnClickListener(v -> {
                 WioMQTTClient.publish(REQUEST_MODE_TOPIC,
-                        ("CLONE" + commands.size()).getBytes());
+                        (CLONE_MODE + commands.size()).getBytes());
 
                 waitingDialog.show();
             });
