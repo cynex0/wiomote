@@ -45,25 +45,35 @@
                 android:lineHeight="@dimen/title_text_size"
                 android:maxLines="1"
                 android:padding="@dimen/button_padding"
-                android:text="Remote Label"
                 android:textColor="?attr/colorOnBackground"
                 android:textSize="@dimen/title_text_size" />
 
-
-            <se.gu.wiomote.views.CircleConstraintLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_margin="10dp">
+                android:layout_height="match_parent">
 
-                <ImageView
-                    android:id="@+id/power"
-                    android:layout_width="wrap_content"
+                <se.gu.wiomote.views.CircleConstraintLayout
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:background="@drawable/button_background_wio_ripple"
-                    android:padding="10dp"
-                    android:src="@drawable/ic_power" />
+                    android:layout_margin="10dp"
+                    app:layout_constraintDimensionRatio="W,1:1"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
 
-            </se.gu.wiomote.views.CircleConstraintLayout>
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/power"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/button_background_wio_ripple"
+                        android:drawableBottom="@drawable/ic_power"
+                        android:drawablePadding="0dp"
+                        android:enabled="false"
+                        android:padding="10dp" />
+
+                </se.gu.wiomote.views.CircleConstraintLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </LinearLayout>
 
@@ -89,23 +99,27 @@
                         android:orientation="vertical"
                         app:layout_constraintWidth_percent="0.5">
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/up"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_marginRight="5dp"
                             android:layout_marginBottom="5dp"
                             android:layout_weight="0.5"
-                            android:background="@drawable/button_background_wio_ripple" />
+                            android:background="@drawable/button_background_wio_ripple"
+                            android:enabled="false"
+                            app:cornerRadius="0dp" />
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/left"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_marginTop="5dp"
                             android:layout_marginRight="5dp"
                             android:layout_weight="0.5"
-                            android:background="@drawable/button_background_wio_ripple" />
+                            android:background="@drawable/button_background_wio_ripple"
+                            android:enabled="false"
+                            app:cornerRadius="0dp" />
 
                     </LinearLayout>
 
@@ -116,23 +130,27 @@
                         app:layout_constraintRight_toRightOf="parent"
                         app:layout_constraintWidth_percent="0.5">
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/right"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_marginLeft="5dp"
                             android:layout_marginBottom="5dp"
                             android:layout_weight="0.5"
-                            android:background="@drawable/button_background_wio_ripple" />
+                            android:background="@drawable/button_background_wio_ripple"
+                            android:enabled="false"
+                            app:cornerRadius="0dp" />
 
-                        <androidx.constraintlayout.widget.ConstraintLayout
+                        <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/down"
                             android:layout_width="match_parent"
                             android:layout_height="0dp"
                             android:layout_marginLeft="5dp"
                             android:layout_marginTop="5dp"
                             android:layout_weight="0.5"
-                            android:background="@drawable/button_background_wio_ripple" />
+                            android:background="@drawable/button_background_wio_ripple"
+                            android:enabled="false"
+                            app:cornerRadius="0dp" />
 
                     </LinearLayout>
 
@@ -142,23 +160,37 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
-                    <TextView
-                        android:id="@+id/ok"
+                    <se.gu.wiomote.views.CircleConstraintLayout
                         android:layout_width="0dp"
                         android:layout_height="0dp"
-                        android:background="@drawable/button_background_wio_ok_ripple"
-                        android:fontFamily="@font/archivo_semi_expanded_regular"
-                        android:gravity="center"
-                        android:src="@drawable/ic_power"
-                        android:text="@string/ok"
-                        android:textColor="?attr/colorOnSecondary"
-                        android:textSize="26dp"
+                        android:background="?attr/colorPrimaryContainer"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintHeight_percent="0.5"
                         app:layout_constraintLeft_toLeftOf="parent"
                         app:layout_constraintRight_toRightOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintWidth_percent="0.5" />
+                        app:layout_constraintWidth_percent="0.5">
+
+                        <se.gu.wiomote.views.CircleConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_margin="10dp">
+
+                            <androidx.appcompat.widget.AppCompatButton
+                                android:id="@+id/ok"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/button_background_wio_ripple"
+                                android:enabled="false"
+                                android:fontFamily="@font/archivo_semi_expanded_regular"
+                                android:gravity="center"
+                                android:text="@string/ok"
+                                android:textColor="@color/button_content_tint"
+                                android:textSize="26dp" />
+
+                        </se.gu.wiomote.views.CircleConstraintLayout>
+
+                    </se.gu.wiomote.views.CircleConstraintLayout>
 
                 </se.gu.wiomote.views.CircleConstraintLayout>
 

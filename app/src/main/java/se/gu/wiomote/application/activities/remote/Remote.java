@@ -19,7 +19,6 @@ import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.DatabaseAccessActivity;
@@ -43,6 +42,7 @@ public class Remote extends DatabaseAccessActivity {
     private final Map<Integer, View> basicButtonMap = new HashMap<>();
     private SharedPreferences preferences;
     private RecyclerView recyclerView;
+    private TextView configurations;
     private TextView label;
     private Configuration config;
 
@@ -58,7 +58,7 @@ public class Remote extends DatabaseAccessActivity {
 
         recyclerView = findViewById(R.id.recycler);
         label = findViewById(R.id.label);
-        TextView configurations = findViewById(R.id.configurations);
+        configurations = findViewById(R.id.configurations);
         View power = findViewById(R.id.power);
         View ok = findViewById(R.id.ok);
         View up = findViewById(R.id.up);
@@ -115,9 +115,9 @@ public class Remote extends DatabaseAccessActivity {
                 config = new Configuration(uuid, name, commands); // Create Configuration from loaded data
             }
         } else { // Create a new configuration
-            name = type.toString() + "-" + uuid.substring(0, 4); // TODO: prompt the user for a name
-            config = new Configuration(uuid, name);
-            getDatabase().insert(type, config);
+            configurations.performClick();
+
+            return;
         }
 
         label.setText(name); // Display the name of the configuration
@@ -127,8 +127,12 @@ public class Remote extends DatabaseAccessActivity {
             View button = entry.getValue();
 
             if (config != null) {
+                button.setEnabled(config.hasCommandForKeyCode(entry.getKey()));
+
                 button.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                         config.serializeCommand(entry.getKey(), true).getBytes()));
+            } else {
+                button.setEnabled(false);
             }
         }
 
@@ -143,28 +147,36 @@ public class Remote extends DatabaseAccessActivity {
 
             WioMQTTClient.setCommandReceivedListener(payload -> {
                 // When a command is received from MQTT, add it to the config
-                Integer addedCommandKeyCode = config.addCommand(new String(payload.getPayloadAsBytes()));
+                Integer keyKode = config.addCommand(new String(payload.getPayloadAsBytes()));
 
                 // If it is a command for a custom button, display a dialog requesting a name for the button
-                if (addedCommandKeyCode != null && addedCommandKeyCode >= 0) {
-                    int index = adapter.getItemCount();
+                if (keyKode != null) {
+                    if (keyKode >= 0) {
+                        int index = adapter.getItemCount();
 
-                    Dialogs.requestInput(this, R.string.label, new Dialogs.OnConfirm() {
-                        @Override
-                        public void onConfirm(String text) {
-                            Command command = config.getCommandForKeyCode(addedCommandKeyCode);
-                            command.label = text;
+                        Dialogs.requestInput(this, R.string.label, new Dialogs.OnConfirm() {
+                            @Override
+                            public void onConfirm(String text) {
+                                Command command = config.getCommandForKeyCode(keyKode);
+                                command.label = text;
 
-                            getDatabase().update(type, config);
+                                getDatabase().update(type, config);
 
-                            adapter.addCustomCommand(command);
-                            adapter.notifyItemInserted(index);
+                                adapter.addCustomCommand(command);
+                                adapter.notifyItemInserted(index);
+                            }
+                        }, () -> config.removeCommand(index));
+
+                        adapter.hideDialog();
+                    } else {
+                        View view = basicButtonMap.get(keyKode);
+
+                        if (view != null) {
+                            view.setEnabled(true);
                         }
-                    }, () -> config.removeCommand(index));
 
-                    adapter.hideDialog();
-                } else {
-                    getDatabase().update(type, config); // always update the DB if a basic command is recorded
+                        getDatabase().update(type, config); // always update the DB if a basic command is recorded
+                    }
                 }
             });
 
