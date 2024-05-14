@@ -95,26 +95,24 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                 holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                         configuration.serializeCommand(position, true).getBytes()));
 
-                holder.itemView.setOnLongClickListener(view -> {
-                    Dialogs.displayDeleteConfirmation(activity, new Dialogs.OnConfirm() {
-                        @Override
-                        public void onConfirm() {
-                            configuration.removeCommand(position);
+                View delete = holder.itemView.findViewById(R.id.delete);
+                delete.setOnClickListener(view -> Dialogs.displayDeleteConfirmation(activity,
+                        new Dialogs.OnConfirm() {
+                            @Override
+                            public void onConfirm() {
+                                configuration.removeCommand(position);
 
-                            activity.getDatabase()
-                                    .update(type, configuration);
+                                activity.getDatabase()
+                                        .update(type, configuration);
 
-                            int index = commands.indexOf(command);
+                                int index = commands.indexOf(command);
 
-                            if (index >= 0) {
-                                commands.remove(index);
-                                notifyItemRemoved(index);
+                                if (index >= 0) {
+                                    commands.remove(index);
+                                    notifyItemRemoved(index);
+                                }
                             }
-                        }
-                    }, null);
-
-                    return true;
-                });
+                        }, null));
             }
         }
     }

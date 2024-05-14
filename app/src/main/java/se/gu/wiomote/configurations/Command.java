@@ -7,7 +7,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 public class Command {
     private static final String TAG = "Command";
