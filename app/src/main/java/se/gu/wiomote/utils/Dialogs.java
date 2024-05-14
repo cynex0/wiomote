@@ -2,11 +2,15 @@ package se.gu.wiomote.utils;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -25,7 +29,7 @@ public class Dialogs {
         Button remove = root.findViewById(R.id.remove);
 
         cancel.setOnClickListener(v -> {
-            if(onCancel != null) {
+            if (onCancel != null) {
                 onCancel.run();
             }
 
@@ -35,7 +39,7 @@ public class Dialogs {
         });
 
         remove.setOnClickListener(v -> {
-            if(onConfirm != null) {
+            if (onConfirm != null) {
                 onConfirm.onConfirm();
             }
 
@@ -47,10 +51,44 @@ public class Dialogs {
         dialog.set(new MaterialAlertDialogBuilder(activity)
                 .setView(root)
                 .setOnCancelListener(d -> {
-                    if(onCancel != null) {
+                    if (onCancel != null) {
                         onCancel.run();
                     }
                 })
+                .create());
+
+        dialog.get().show();
+    }
+
+    public static void requestPermissionFromSettings(Activity activity, int textResId) {
+        AtomicReference<Dialog> dialog = new AtomicReference<>(null);
+
+        View root = activity.getLayoutInflater().inflate(R.layout.permission_dialog, null);
+
+        ((TextView) root.findViewById(R.id.text)).setText(textResId);
+
+        Button cancel = root.findViewById(R.id.cancel);
+        Button settings = root.findViewById(R.id.settings);
+
+        cancel.setOnClickListener(v -> {
+            if (dialog.get() != null) {
+                dialog.get().dismiss();
+            }
+        });
+
+        settings.setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.fromParts("package", activity.getPackageName(), null));
+
+            activity.startActivity(intent);
+
+            if (dialog.get() != null) {
+                dialog.get().dismiss();
+            }
+        });
+
+        dialog.set(new MaterialAlertDialogBuilder(activity)
+                .setView(root)
                 .create());
 
         dialog.get().show();
@@ -84,7 +122,7 @@ public class Dialogs {
         });
 
         cancel.setOnClickListener(v -> {
-            if(onCancel != null) {
+            if (onCancel != null) {
                 onCancel.run();
             }
 
@@ -94,7 +132,7 @@ public class Dialogs {
         });
 
         save.setOnClickListener(v -> {
-            if(onConfirm != null) {
+            if (onConfirm != null) {
                 onConfirm.onConfirm(editText.getText().toString());
             }
 
@@ -106,7 +144,7 @@ public class Dialogs {
         dialog.set(new MaterialAlertDialogBuilder(activity)
                 .setView(root)
                 .setOnCancelListener(d -> {
-                    if(onCancel != null) {
+                    if (onCancel != null) {
                         onCancel.run();
                     }
                 })
@@ -116,7 +154,10 @@ public class Dialogs {
     }
 
     public interface OnConfirm {
-        default void onConfirm(){}
-        default void onConfirm(String text){}
+        default void onConfirm() {
+        }
+
+        default void onConfirm(String text) {
+        }
     }
 }

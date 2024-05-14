@@ -33,25 +33,23 @@ public class WiFiHandler {
                 super.onCapabilitiesChanged(network, networkCapabilities);
 
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                    if (currentCapability != NetworkCapabilities.TRANSPORT_WIFI) {
-                        int oldCapability = currentCapability;
-                        currentCapability = NetworkCapabilities.TRANSPORT_WIFI;
+                    WifiInfo info = getWiFiInfo();
 
-                        WifiInfo info = getWiFiInfo();
+                    int oldCapability = currentCapability;
+                    currentCapability = NetworkCapabilities.TRANSPORT_WIFI;
 
-                        for (OnNetworkChanged listener : listeners) {
-                            Utils.runOnUiThread(() -> {
-                                if (oldCapability == UNKNOWN) {
-                                    listener.onConnected();
-                                }
+                    for (OnNetworkChanged listener : listeners) {
+                        Utils.runOnUiThread(() -> {
+                            if (oldCapability == UNKNOWN) {
+                                listener.onConnected();
+                            }
 
-                                if (info != null && info.getNetworkId() >= 0) {
-                                    listener.onWiFiConnected(info);
-                                } else {
-                                    listener.onWiFiConnected(null);
-                                }
-                            });
-                        }
+                            if (info != null && info.getNetworkId() >= 0) {
+                                listener.onWiFiConnected(info);
+                            } else {
+                                listener.onWiFiConnected(null);
+                            }
+                        });
                     }
                 } else if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
                         networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
