@@ -49,22 +49,23 @@
 #define SCREEN_ROTATION            3
 
 // Constants for signal icon
-#define SIGNAL_ICON_X            280  // X placement of icon
-#define SIGNAL_ICON_Y            200  // Y placement of icon
-#define ICON_INNER_RADIUS          5  // Radius of the smallest cirlce
-#define ICON_OUTER_RADIUS         30  // Radius of the largest circle
-#define ICON_RING_SPACING          5  // Space between every ring in icon
-#define ICON_SIGNAL_COLOR   TFT_BLUE  // Color of the moving signal rings
+#define SIGNAL_ICON_X          280  // X placement of icon
+#define SIGNAL_ICON_Y          200  // Y placement of icon
+#define ICON_INNER_RADIUS        5  // Radius of the smallest cirlce
+#define ICON_OUTER_RADIUS       30  // Radius of the largest circle
+#define ICON_RING_SPACING        5  // Space between every ring in icon
+#define ICON_SIGNAL_COLOR TFT_BLUE  // Color of the moving signal rings
 
 #define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
 #define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
 #define ARROW_LENGTH       40  // Value of arrow length
 #define ARROW_COLOR TFT_WHITE
 
-#define TEXT_SIZE_L          3
-#define TEXT_SIZE_M          2
-#define TEXT_SIZE_S          1
+#define TEXT_SIZE_L 3
+#define TEXT_SIZE_M 2
+#define TEXT_SIZE_S 1
 
+#define ICON_COLOR      TFT_LIGHTGREY  // Define color for connection icon
 #define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
 #define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
 
@@ -99,30 +100,38 @@
 
 #define TOPIC_CONN_OUT "wiomote/connection/terminal"
 #define TOPIC_CONN_IN       "wiomote/connection/app"
-#define TOPIC_APP_COMMAND           "wiomote/ir/app"
+#define TOPIC_IR_IN                 "wiomote/ir/app"
+#define TOPIC_IR_OUT           "wiomote/ir/terminal"
+#define TOPIC_CURRENT_MODE            "wiomote/mode"
+#define TOPIC_SWITCH_MODE    "wiomote/request/clone"
+
+#ifdef MQTT_PING
+#define MQTT_PING_INTERVAL 1000
+#endif
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
 // Wifi connection icon
-#define WIFI_ICON_CIRCLE_X 290
-#define WIFI_ICON_CIRCLE_Y 35
-#define WIFI_ICON_CIRCLE_MAX_RAD 21
-#define WIFI_ICON_CIRCLE_RADIUS_DIFF 7
-#define WIFI_ICON_ICON_COLOR_ON TFT_CYAN
-#define WIFI_ICON_ICON_COLOR_OFF TFT_DARKGREY
+#define WIFI_CONNECTION_CIRCLE_X                290
+#define WIFI_CONNECTION_CIRCLE_Y                 35
+#define WIFI_CONNECTION_CIRCLE_MAX_RAD           21
+#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF        7
+#define WIFI_CONNECTION_ICON_COLOR_ON      TFT_CYAN
+#define WIFI_CONNECTION_ICON_COLOR_OFF TFT_DARKGREY
 
 // Bluetooth connection icon
-#define BLT_ICON_START_X 245
-#define BLT_ICON_START_Y 11
-#define BLT_ICON_WIDTH 15
-#define BLT_ICON_HEIGHT 25
-#define BLT_ICON_COLOR_ON TFT_CYAN
+#define BLT_ICON_START_X            245
+#define BLT_ICON_START_Y             11
+#define BLT_ICON_WIDTH               15
+#define BLT_ICON_HEIGHT              25
+#define BLT_ICON_COLOR_ON      TFT_CYAN
 #define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
 struct Command {
   uint16_t *rawData;
   uint8_t dataLength;
+  short keyCode;
 };
 
 // Button map to commands
@@ -154,6 +163,9 @@ unsigned long lastPinged = 0;
 bool receiveMode = false;
 bool configMode = false;
 bool prevModeBtnState = HIGH;
+int chosenButton = -1; // Button selection in the cloning mode
+bool chosenFromApp = false;
+bool mappingToCustomButton = false;
 bool prevConfigBtnState = HIGH;
 bool prevConfigSkipBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
@@ -278,7 +290,8 @@ void setupBLE() {
 void mqttPublishWithLog(const char* topic, const char* payload) {
   mqttClient.publish(topic, payload);
   #ifdef DEBUG_LOG
-    Serial.printf("Published message [%s]: %s\n", topic, payload);
+    Serial.print(F("Published message [")); Serial.print(topic); Serial.print(F("]: "));
+    Serial.println(payload);
   #endif
 }
 
@@ -304,12 +317,23 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #endif
 
   // A command sent from the app
-  if (strcmp(topic, TOPIC_APP_COMMAND) == 0) {
+  if (strcmp(topic, TOPIC_IR_IN) == 0) {
     Command command = deserializeCommand(buff_p);
 
-    emitData(command);
-
-    delete[] command.rawData;
+    if (!receiveMode) {
+      emitData(command);
+    } else {
+      chosenButton = -1 * (command.keyCode + 1);
+      chosenFromApp = true;
+    }
+  }
+  else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
+    if (!receiveMode) {
+      switchMode();
+    }
+    chosenButton = atoi(buff_p);
+    chosenFromApp = true;
+    mappingToCustomButton = true;
   }
 }
 
@@ -328,7 +352,7 @@ void updateMQTT() {
   if (mqttClient.connected()) {
     mqttClient.loop();
     #ifdef MQTT_PING
-      if(millis() - lastPinged > 5000) {
+      if(millis() - lastPinged > MQTT_PING_INTERVAL) {
         mqttPublishWithLog(TOPIC_CONN_OUT, "ping");
         lastPinged = millis();
       }
@@ -349,7 +373,8 @@ void updateMQTT() {
       #endif
 
       mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
-      mqttClient.subscribe(TOPIC_APP_COMMAND); // topic to receive IR commands from the app
+      mqttClient.subscribe(TOPIC_IR_IN); // topic to receive IR commands from the app
+      mqttClient.subscribe(TOPIC_SWITCH_MODE); // topic to switch to receiveMode when creating custom buttons in the app 
     } else {
       #ifdef DEBUG_LOG
         Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
@@ -408,7 +433,8 @@ void updateNetwork() {
   if(WiFi.isConnected()) {
     #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
-        Serial.println("Connected to " + WiFi.SSID());
+        Serial.print(F("Connected to "));
+		    Serial.println(WiFi.SSID());
         Serial.print(F("IP address: "));
         Serial.println(WiFi.localIP());
       }
@@ -440,7 +466,7 @@ void updateNetwork() {
   }
 }
 
-int getButtonPressed(){
+int getButtonPressedIndex(){
   int out = -1;
 
   if (digitalRead(PRESS_BTN) == LOW) {
@@ -460,6 +486,71 @@ int getButtonPressed(){
   return out;
 }
 
+const char* getButtonName(const int index) {
+  char* out;
+  switch(index) {
+    case POWER_BTN_INDEX:
+      out = "POWER"; 
+      break;
+    case UP_BTN_INDEX:
+      out = "UP";
+      break;
+    case RIGHT_BTN_INDEX:
+      out = "RIGHT";
+      break;
+    case DOWN_BTN_INDEX:
+      out = "DOWN";
+      break;
+    case LEFT_BTN_INDEX:
+      out = "LEFT";
+      break;
+    case PRESS_BTN_INDEX:
+      out = "OK";
+      break;
+  }
+  return out;
+}
+
+
+/* JSON format (may also contain more keys):
+  {
+    "keyCode":<keyCode>,
+    "command":{
+      "label":<label>
+      "dataLength":<length>,
+      "rawData":[<byte0>,<byte1>,...]
+    }
+  }
+*/
+char* serializeCommand(const Command& command) {
+  JsonDocument* doc = new JsonDocument;
+  JsonObject commandObj = doc->createNestedObject("command");
+
+  (*doc)["keyCode"] = command.keyCode;
+  commandObj["label"] = getButtonName(-1 * (command.keyCode + 1));
+  commandObj["dataLength"] = command.dataLength;
+
+  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
+  for (uint8_t i = 0; i < command.dataLength; i++) {
+	  rawDataJson.add(command.rawData[i]);
+  }
+
+  char* out = new char[1024]; // Buffer to hold the output
+  serializeJson(*doc, out, 1024);
+
+  delete doc;
+  return out;
+}
+
+/* Expected format (may also contain more keys):
+  {
+    "keyCode":<keyCode>,
+    "command":{
+      "dataLength":<length>,
+      "rawData":[<byte0>,<byte1>,...]
+    }
+  }
+*/
 #ifdef DEBUG_CONFIG_CREATOR
 int convertKeyCodeToApp(const int index) { // Converts the index of the button to the app's key code
   if(index > BTN_COUNT - 1) return index - BTN_COUNT;
@@ -471,8 +562,10 @@ Command deserializeCommand(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
   
-  const uint8_t dataLength = (*doc)["command"]["dataLength"];
-  JsonArray rawDataJson = (*doc)["command"]["rawData"];
+  short keyCode = (*doc)[F("keyCode")]; 
+
+  const uint8_t dataLength = (*doc)[F("command")][F("dataLength")];
+  JsonArray rawDataJson = (*doc)[F("command")][F("rawData")];
 
   uint16_t *rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
@@ -480,7 +573,7 @@ Command deserializeCommand(const char* jsonString) {
   }
 
   delete doc;
-  return {rawData, dataLength};
+  return {rawData, dataLength, keyCode};
 }
 
 JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const Command& command) {
@@ -500,7 +593,6 @@ JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const C
 }
 
 void startBuzzer() {
-
   if (!(isBuzzing)) {  // Checks that buzzer isnt active already
     
     analogWrite(BUZZER_PIN, BUZZER_FRQ); // Start buzzer
@@ -571,7 +663,7 @@ void drawRemote(){
     tft.fillScreen(INVERTED_BG_COLOR);
     tft.setTextColor(INVERTED_TEXT_COLOR);
     tft.setTextSize(TEXT_SIZE_M);
-    tft.drawString(F("Recording IR"), CENTER_X, CENTER_Y);
+	  tft.drawString(F("Select a button"), CENTER_X, CENTER_Y);
   } else {
     // Screen background
     tft.fillScreen(DEFAULT_BG_COLOR);
@@ -665,6 +757,7 @@ void drawBltConnectionIcon(){
 
 void emitData(const Command& command){
   if (command.rawData != nullptr){
+	if(command.dataLength == 0) return; // command is empty, do nothing
     emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
     drawEmitSignal();
 
@@ -685,7 +778,15 @@ void emitData(const Command& command){
 }
 
 void switchMode(){
+  if (receiveMode) {
+    chosenButton = -1; // Forget the chosen button when the user exits cloning mode
+    mappingToCustomButton = false;
+    receiver.disableIRIn(); // Disable IR input when exiting cloning mode to prevent reading random signals
+  } 
   receiveMode = !receiveMode;
+
+  mqttPublishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
+  
   if(!receiveMode){
     receiver.disableIRIn();
   }
@@ -720,45 +821,67 @@ bool canMapButtons() {
   return false;
 }
 
-void receive(){
-  if (!canMapButtons()) {
-    switchMode();
+void receive() {
+	if (!canMapButtons()) {
+		switchMode();
+		return;
+	}
 
-    return;
-  }
-
-  receiver.enableIRIn();
-
-  if (receiver.getResults()){
-    const uint8_t dataLength = recvGlobal.recvLength;
-    uint16_t *rawData = new uint16_t[dataLength];
+  int pressedButton = getButtonPressedIndex();
+  if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
+    if(!chosenFromApp) chosenButton = pressedButton;
+    tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
     
-    for (uint8_t i = 1; i < dataLength; i++) {
-      rawData[i - 1] = recvGlobal.recvBuffer[i];
-    }
-
-    rawData[dataLength - 1] = 1000; // Arbitrary trailing space
-    const Command recCommand = {rawData, dataLength};
-    drawReceiveSignal();
+    tft.setTextSize(TEXT_SIZE_M);
+    char message[16];
+    sprintf(message, "%s selected!", mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
+    tft.drawString(message, CENTER_X, CENTER_Y);
     
-    // Save the signal to a button
     tft.setTextSize(TEXT_SIZE_S);
-    tft.drawString(F("Received. Press a button to save."), CENTER_X, CENTER_Y + 20);
-
-    int chosenButton;
+    tft.drawString(F("Waiting for IR."), CENTER_X, CENTER_Y + 20);
     
-    do {
-      chosenButton = getButtonPressed();
+    // Reset logic values to not enter this block every loop
+    chosenFromApp = false;
+    pressedButton = -1;
+  }
+  
+  // wait until a button is pressed
+  if (chosenButton != -1) {
+    receiver.enableIRIn(); // Enable receiving only after a button is pressed
+    // NOTE: IR input is automatically disabled after a signal is received
 
-      if (digitalRead(MODE_BTN) == LOW){
-        switchMode();
-      } else {
+	  if (receiver.getResults()){
+		  uint8_t dataLength = recvGlobal.recvLength;
+		  uint16_t *rawData = new uint16_t[dataLength];
+
+      for (uint8_t i = 1; i < dataLength; i++) {
+        rawData[i - 1] = recvGlobal.recvBuffer[i];
+      }
+
+      rawData[dataLength - 1] = 1000; // Arbitrary trailing space
+
+      Command recCommand;
+      if (!mappingToCustomButton) {
+        recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
         commandMap[chosenButton] = recCommand; // Write the received command to the map
       }
-    } while(chosenButton == -1); // Wait for a button press
+      else {
+        recCommand = {rawData, dataLength, chosenButton};
+      }
+      
+      mqttPublishWithLog(TOPIC_IR_OUT, serializeCommand(recCommand));
 
-    drawRemote();
-  }
+      tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
+      drawReceiveSignal();
+
+      drawRemote(); // Reset the UI
+
+      // Reset logic variables
+      if (mappingToCustomButton) switchMode();
+      mappingToCustomButton = false;
+      chosenButton = -1;
+    }
+  } 
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
@@ -832,8 +955,10 @@ void receiveConfig(){
 #endif
 
 void setup() {
+  #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) // Serial is only needed if debugging is enabled
   Serial.begin(9600); // Start serial
   while(!Serial); // Wait for serial
+  #endif
 
   setupWiFi();
   setupMQTT();
@@ -876,20 +1001,19 @@ void loop() {
   bool modeBtnState = digitalRead(MODE_BTN);
   if (modeBtnState != prevModeBtnState && !configMode) {
     if (modeBtnState == HIGH){
-    switchMode();
+      switchMode();
     }
   }
-
-    prevModeBtnState = modeBtnState;
+  prevModeBtnState = modeBtnState;
 
   #ifdef DEBUG_CONFIG_CREATOR
   // Config button logic
   bool configBtnState = digitalRead(CONFIG_REC_BTN);
   if (configBtnState != prevConfigBtnState && !receiveMode) {
-  if (configBtnState == HIGH){
-    switchConfigMode();
-    completedConfigsCount = 0;
-  }
+    if (configBtnState == HIGH){
+      switchConfigMode();
+      completedConfigsCount = 0;
+    }
   }
   prevConfigBtnState = configBtnState;
   #endif
@@ -903,7 +1027,7 @@ void loop() {
   } 
   #endif
   else { // Detecting button presses
-    int pressed = getButtonPressed();
+    int pressed = getButtonPressedIndex();
   
     if (pressed != -1) {
       const Command command = commandMap[pressed];

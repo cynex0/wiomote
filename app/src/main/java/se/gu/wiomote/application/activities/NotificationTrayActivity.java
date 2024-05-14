@@ -1,4 +1,4 @@
-package se.gu.wiomote.activities;
+package se.gu.wiomote.application.activities;
 
 import android.animation.LayoutTransition;
 import android.content.Intent;
