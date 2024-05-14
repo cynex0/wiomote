@@ -821,29 +821,14 @@ void switchConfigMode(){ // Switches between config mode and normal mode
 }
 #endif
 
-bool canMapButtons() {
-  for (uint8_t i = 0; i < BTN_COUNT; i++) {
-    if (commandMap[i].dataLength == 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void receive() {
-	if (!canMapButtons()) {
-		switchMode();
-		return;
-	}
-
   int pressedButton = getButtonPressedIndex();
   if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
     if(!chosenFromApp) chosenButton = pressedButton;
     tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
     
     tft.setTextSize(TEXT_SIZE_M);
-    char message[16];
+    char message[16]; // Max length: 16 = 10 (" selected!") + 6 ("CUSTOM")
     sprintf(message, "%s selected!", mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
     tft.drawString(message, CENTER_X, CENTER_Y);
     
