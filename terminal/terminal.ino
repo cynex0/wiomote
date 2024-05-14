@@ -858,6 +858,7 @@ void receive() {
       Command recCommand;
       if (!mappingToCustomButton) {
         recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
+        delete[] commandMap[chosenButton].rawData; // delete the previously stored data
         commandMap[chosenButton] = recCommand; // Write the received command to the map
       }
       else {
