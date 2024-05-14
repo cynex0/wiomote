@@ -113,12 +113,12 @@
 #define CARRIER_FREQUENCY_KHZ 38
 
 // Wifi connection icon
-#define WIFI_CONNECTION_CIRCLE_X                290
-#define WIFI_CONNECTION_CIRCLE_Y                 35
-#define WIFI_CONNECTION_CIRCLE_MAX_RAD           21
-#define WIFI_CONNECTION_CIRCLE_RADIUS_DIFF        7
-#define WIFI_CONNECTION_ICON_COLOR_ON      TFT_CYAN
-#define WIFI_CONNECTION_ICON_COLOR_OFF TFT_DARKGREY
+#define WIFI_ICON_CIRCLE_X                290
+#define WIFI_ICON_CIRCLE_Y                 35
+#define WIFI_ICON_CIRCLE_MAX_RAD           21
+#define WIFI_ICON_CIRCLE_RADIUS_DIFF        7
+#define WIFI_ICON_ICON_COLOR_ON      TFT_CYAN
+#define WIFI_ICON_ICON_COLOR_OFF TFT_DARKGREY
 
 // Bluetooth connection icon
 #define BLT_ICON_START_X            245
