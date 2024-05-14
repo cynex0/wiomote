@@ -157,7 +157,7 @@ public class Remote extends DatabaseAccessActivity {
 
 
         // Set listener to update the DB every time the terminal exits cloning mode and the config changes
-        WioMQTTClient.setTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+        WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
             private Configuration prevConfig;
 
             @Override

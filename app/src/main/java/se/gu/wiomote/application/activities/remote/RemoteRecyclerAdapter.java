@@ -63,6 +63,13 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                         String.valueOf(commands.size()).getBytes());
 
                 waitingDialog.show();
+
+                WioMQTTClient.addTerminalModeListener(new WioMQTTClient.TerminalModeListener() {
+                    @Override
+                    public void onExitedCloningMode() {
+                        waitingDialog.dismiss();
+                    }
+                });
             });
         }
 
