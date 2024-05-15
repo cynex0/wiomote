@@ -3,6 +3,7 @@ package se.gu.wiomote.configurations;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,12 +19,12 @@ public class Configuration {
     private static final String TAG = "Configuration";
     private static final String KEYCODE_KEY = "keyCode";
     private static final String COMMAND_KEY = "command";
-    private final Map<Integer, Command> commands;
+    private final LinkedHashMap<Integer, Command> commands;
     public final String uuid;
     public String name;
 
     public Configuration(String uuid, String name,
-                         @NonNull Map<Integer, Command> commands) {
+                         @NonNull LinkedHashMap<Integer, Command> commands) {
         this.uuid = uuid;
         this.name = name;
         this.commands = commands;
@@ -160,12 +161,12 @@ public class Configuration {
         return builder.toString();
     }
 
-    public List<Command> getCustomCommands() {
-        List<Command> commands = new ArrayList<>();
+    public List<Entry> getCustomCommands() {
+        List<Entry> commands = new ArrayList<>();
 
         for (Map.Entry<Integer, Command> entry : this.commands.entrySet()) {
             if (entry.getKey() >= 0) {
-                commands.add(entry.getValue());
+                commands.add(new Entry(entry.getKey(), entry.getValue()));
             }
         }
 
@@ -197,5 +198,28 @@ public class Configuration {
 
         return commandsEqual(other.commands) ||
                 name.equals(other.name);
+    }
+
+    public static class Entry {
+        public final int keyCode;
+        public final Command command;
+
+        public Entry(int keyCode, Command command) {
+            this.keyCode = keyCode;
+            this.command = command;
+        }
+
+        @Override
+        public boolean equals(@Nullable Object object) {
+            if(object == this) {
+                return true;
+            } else if (object instanceof Entry) {
+                Entry entry = (Entry) object;
+
+                return entry.keyCode == keyCode;
+            }
+
+            return false;
+        }
     }
 }

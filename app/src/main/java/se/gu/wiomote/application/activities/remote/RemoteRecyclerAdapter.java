@@ -15,7 +15,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.List;
 
 import se.gu.wiomote.R;
-import se.gu.wiomote.configurations.Command;
 import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.network.mqtt.WioMQTTClient;
@@ -29,7 +28,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     private static final String CLONE_MODE = "CLONE";
     private final Configuration configuration;
     private final ConfigurationType type;
-    private final List<Command> commands;
+    private final List<Configuration.Entry> data;
     private final Dialog waitingDialog;
     private final Remote activity;
 
@@ -37,7 +36,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
         this.activity = activity;
         this.configuration = configuration;
         this.type = type;
-        this.commands = configuration.getCustomCommands();
+        this.data = configuration.getCustomCommands();
 
         this.waitingDialog = new MaterialAlertDialogBuilder(activity)
                 .setView(activity.getLayoutInflater().inflate(R.layout.waiting_dialog, null))
@@ -70,7 +69,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
             itemView.setOnClickListener(v -> {
                 WioMQTTClient.publish(REQUEST_MODE_TOPIC,
-                        (CLONE_MODE + commands.size()).getBytes());
+                        (CLONE_MODE + (data.size() > 0 ? data.get(data.size() - 1).keyCode + 1 : 0)).getBytes());
 
                 waitingDialog.show();
             });
@@ -87,10 +86,10 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, @SuppressLint("RecyclerView") int position) {
         if (holder.viewType == CUSTOM_BUTTON) {
-            Command command = commands.get(position);
+            Configuration.Entry entry = data.get(position);
 
-            if (command != null) {
-                holder.label.setText(command.label);
+            if (entry != null) {
+                holder.label.setText(entry.command.label);
 
                 holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                         configuration.serializeCommand(position, true).getBytes()));
@@ -100,15 +99,15 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                         new Dialogs.OnConfirm() {
                             @Override
                             public void onConfirm() {
-                                configuration.removeCommand(position);
+                                configuration.removeCommand(entry.keyCode);
 
                                 activity.getDatabase()
                                         .update(type, configuration);
 
-                                int index = commands.indexOf(command);
+                                int index = data.indexOf(entry);
 
                                 if (index >= 0) {
-                                    commands.remove(index);
+                                    data.remove(index);
                                     notifyItemRemoved(index);
                                 }
                             }
@@ -124,11 +123,11 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
 
     @Override
     public int getItemCount() {
-        return commands.size() + 1;
+        return data.size() + 1;
     }
 
-    public void addCustomCommand(Command command) {
-        commands.add(command);
+    public void addCustomCommand(Configuration.Entry command) {
+        data.add(command);
     }
 
     public void hideDialog() {
