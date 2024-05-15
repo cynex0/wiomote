@@ -92,7 +92,7 @@ public class RemoteRecyclerAdapter extends RecyclerView.Adapter<RemoteRecyclerAd
                 holder.label.setText(entry.command.label);
 
                 holder.itemView.setOnClickListener(view -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
-                        configuration.serializeCommand(position, true).getBytes()));
+                        configuration.serializeCommand(entry.keyCode, true).getBytes()));
 
                 View delete = holder.itemView.findViewById(R.id.delete);
                 delete.setOnClickListener(view -> Dialogs.displayDeleteConfirmation(activity,
