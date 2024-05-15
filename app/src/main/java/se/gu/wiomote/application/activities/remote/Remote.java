@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.SnapHelper;
 import com.github.rubensousa.gravitysnaphelper.GravitySnapHelper;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import se.gu.wiomote.R;
@@ -101,7 +102,7 @@ public class Remote extends DatabaseAccessActivity {
 
         if (cursor.getCount() > 0) { // Configuration for current uuid exists in the db
             name = Database.getColumn(cursor, Database.Columns.NAME);
-            Map<Integer, Command> commands = Configuration.deserializeCommands(
+            LinkedHashMap<Integer, Command> commands = Configuration.deserializeCommands(
                     Database.getColumn(cursor, Database.Columns.COMMANDS)
             );
 
@@ -162,7 +163,7 @@ public class Remote extends DatabaseAccessActivity {
 
                                 getDatabase().update(type, config);
 
-                                adapter.addCustomCommand(command);
+                                adapter.addCustomCommand(new Configuration.Entry(keyKode, command));
                                 adapter.notifyItemInserted(index);
                             }
                         }, () -> config.removeCommand(index));
