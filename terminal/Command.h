@@ -15,6 +15,7 @@ private:
 public:
   Command(const char* jsonString); // create Command instance from a jsonString
   Command(uint16_t *rawData, uint8_t dataLength, short keyCode); // create Command instance by defining all members
+  ~Command(); // destructor
 
   uint16_t* getRawData();
   uint8_t getDataLength();

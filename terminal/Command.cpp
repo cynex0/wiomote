@@ -86,3 +86,7 @@ char* Command::serialize(const char* label) {
   delete doc;
   return out;
 }
+
+Command::~Command() {
+  delete[] rawData; // free dynamically allocated memory
+}
