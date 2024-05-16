@@ -99,7 +99,6 @@
 #define UUID_PREFIX     "WioTerminal-"
 
 #define TOPIC_CONN_OUT "wiomote/connection/terminal"
-#define TOPIC_CONN_IN       "wiomote/connection/app"
 #define TOPIC_IR_IN                 "wiomote/ir/app"
 #define TOPIC_IR_OUT           "wiomote/ir/terminal"
 #define TOPIC_CURRENT_MODE            "wiomote/mode"
@@ -247,7 +246,6 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       wifiInfo.clear();
       deserializeJson(wifiInfo, data);
 
-      mqttClient.unsubscribe(TOPIC_CONN_IN);
       WiFi.disconnect();
 
       wifiDeviceConnected = DISCONNECTED;
@@ -382,7 +380,6 @@ void updateMQTT() {
         mqttPublishWithLog(TOPIC_CONN_OUT, "Publish test WIO");
       #endif
 
-      mqttClient.subscribe(TOPIC_CONN_IN); // topic to receive "pongs" from the app
       mqttClient.subscribe(TOPIC_IR_IN); // topic to receive IR commands from the app
       mqttClient.subscribe(TOPIC_SWITCH_MODE); // topic to switch to receiveMode when creating custom buttons in the app 
     } else {
