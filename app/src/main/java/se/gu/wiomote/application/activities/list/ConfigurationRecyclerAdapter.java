@@ -16,11 +16,9 @@ import com.shuhart.stickyheader.StickyAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import se.gu.wiomote.R;
 import se.gu.wiomote.application.activities.remote.Remote;
-import se.gu.wiomote.configurations.Configuration;
 import se.gu.wiomote.configurations.ConfigurationType;
 import se.gu.wiomote.configurations.Database;
 import se.gu.wiomote.utils.Dialogs;
