@@ -128,7 +128,8 @@ public class Remote extends DatabaseAccessActivity {
             View button = entry.getValue();
 
             if (config != null) {
-                button.setEnabled(config.hasCommandForKeyCode(entry.getKey()));
+                button.setEnabled(type == ConfigurationType.CUSTOM ?
+                        true : config.hasCommandForKeyCode(entry.getKey())); // Always enable buttons if in custom config
 
                 button.setOnClickListener(v -> WioMQTTClient.publish(Remote.IR_SEND_TOPIC,
                         config.serializeCommand(entry.getKey(), true).getBytes()));
