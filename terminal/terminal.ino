@@ -3,9 +3,7 @@
 //#define DEBUG_LOG   // log events to serial
 //#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 
-
 #include <ArduinoJson.h>
-#include <ArduinoJson.hpp>
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -21,6 +19,7 @@
 #include <TFT_eSPI.h>
 
 #include "WioMqttClient.h" 
+#include "Command.h"
 
 
 // Button indexes for the array acting as a map
@@ -73,7 +72,6 @@
 #define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
 #define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
 
-
 // Buttons
 #define UP_BTN        WIO_5S_UP
 #define DOWN_BTN    WIO_5S_DOWN
@@ -94,7 +92,6 @@
 #define CONNECTING   1
 #define DISCONNECTED 2
 
-
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
 
@@ -114,10 +111,8 @@
 #define BLT_ICON_COLOR_ON      TFT_CYAN
 #define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
-#include "Command.h"
-
 // Button map to commands
-Command *commandMap = new Command[BTN_COUNT];
+Command **commandMap = new Command*[BTN_COUNT];
 
 // LCD 
 TFT_eSPI tft;
@@ -178,7 +173,7 @@ char** configTexts = new char*[configTextsLength]{ // label name for each config
   "VOLUME DOWN",
   "MUTE"
 };
-Command *configCommandsList = new Command[configTextsLength]; // array to store recorded commands that will be later serialized into one config
+Command **configCommandsList = new Command*[configTextsLength]; // array to store recorded commands that will be later serialized into one config
 #endif
 
 void decideBltConnectionIcon(){
@@ -261,15 +256,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
   // A command sent from the app
   if (strcmp(topic, TOPIC_IR_IN) == 0) {
-    Command command = deserializeCommand(buff_p);
+    Command* command = new Command(buff_p);
 
     if (!receiveMode) {
       emitData(command);
     } else {
-      chosenButton = -1 * (command.keyCode + 1);
+      chosenButton = -1 * (command->getKeyCode() + 1);
       chosenFromApp = true;
     }
-    delete[] command.rawData;
+    delete command;
   }
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
@@ -447,85 +442,11 @@ const char* getButtonName(const int index) {
 }
 
 
-/* JSON format (may also contain more keys):
-  {
-    "keyCode":<keyCode>,
-    "command":{
-      "label":<label>
-      "dataLength":<length>,
-      "rawData":[<byte0>,<byte1>,...]
-    }
-  }
-*/
-char* serializeCommand(const Command& command) {
-  JsonDocument* doc = new JsonDocument;
-  JsonObject commandObj = doc->createNestedObject("command");
-
-  (*doc)["keyCode"] = command.keyCode;
-  commandObj["label"] = getButtonName(-1 * (command.keyCode + 1));
-  commandObj["dataLength"] = command.dataLength;
-
-  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
-  for (uint8_t i = 0; i < command.dataLength; i++) {
-	  rawDataJson.add(command.rawData[i]);
-  }
-
-  char* out = new char[1024]; // Buffer to hold the output
-  serializeJson(*doc, out, 1024);
-
-  delete doc;
-  return out;
-}
-
-/* Expected format (may also contain more keys):
-  {
-    "keyCode":<keyCode>,
-    "command":{
-      "dataLength":<length>,
-      "rawData":[<byte0>,<byte1>,...]
-    }
-  }
-*/
-#ifdef DEBUG_CONFIG_CREATOR
-int convertKeyCodeToApp(const int index) { // Converts the index of the button to the app's key code
+int convertIndexToKeyCode(const int index) { // Converts the index of the button to the app's key code
   if(index > BTN_COUNT - 1) return index - BTN_COUNT;
   return -1 * (index + 1);
 }
-#endif
 
-Command deserializeCommand(const char* jsonString) {
-  JsonDocument* doc = new JsonDocument;
-  deserializeJson(*doc, jsonString);
-  
-  short keyCode = (*doc)[F("keyCode")]; 
-
-  const uint8_t dataLength = (*doc)[F("command")][F("dataLength")];
-  JsonArray rawDataJson = (*doc)[F("command")][F("rawData")];
-
-  uint16_t *rawData = new uint16_t[dataLength];
-  for (uint8_t i = 0; i < dataLength; i++) {
-    rawData[i] = rawDataJson[i];
-  }
-
-  delete doc;
-  return {rawData, dataLength, keyCode};
-}
-
-JsonDocument serializeCommandToDoc(const int keyCode, const char* label, const Command& command) {
-  JsonDocument doc;
-  JsonObject commandObj = doc.createNestedObject("command");
-
-  doc["keyCode"] = keyCode;
-  commandObj["label"] = label;
-  commandObj["dataLength"] = command.dataLength;
-
-  JsonArray rawDataJson = commandObj.createNestedArray("rawData");
-  for (uint8_t i = 0; i < command.dataLength; i++) {
-  rawDataJson.add(command.rawData[i]);
-  }
-
-  return doc;
-}
 
 void startBuzzer() {
   if (!(isBuzzing)) {  // Checks that buzzer isnt active already
@@ -678,22 +599,23 @@ void drawBltConnectionIcon(){
   tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
 }
 
-void emitData(const Command& command){
-  if (command.rawData != nullptr){
-	if(command.dataLength == 0) return; // command is empty, do nothing
-    emitter.send(command.rawData, command.dataLength, CARRIER_FREQUENCY_KHZ);
-    drawEmitSignal();
+void emitData(Command *command){
 
-    #ifdef DEBUG_LOG
-      Serial.print(F("Signal sent: [")); Serial.print(command.dataLength); Serial.print(F("]{"));
+  if (command->getRawData() != nullptr){
+	  if(command->getDataLength() == 0) return; // command is empty, do nothing
+      emitter.send(command->getRawData(), command->getDataLength(), CARRIER_FREQUENCY_KHZ);
+      drawEmitSignal();
 
-      for (uint8_t i = 0; i < command.dataLength; i++) {
-        Serial.print(command.rawData[i]);
+      #ifdef DEBUG_LOG
+       Serial.print(F("Signal sent: [")); Serial.print(command->getDataLength()); Serial.print(F("]{"));
 
-        if (i != command.dataLength - 1) {
-          Serial.print(F(", "));
+       for (uint8_t i = 0; i < command->getDataLength(); i++) {
+         Serial.print(command->getRawData()[i]);
+
+          if (i != command->getDataLength() - 1) {
+            Serial.print(F(", "));
+          }
         }
-      }
 
       Serial.println(F("}"));
     #endif
@@ -768,17 +690,18 @@ void receive() {
 
       rawData[dataLength - 1] = 1000; // Arbitrary trailing space
 
-      Command recCommand;
       if (!mappingToCustomButton) {
-        recCommand = {rawData, dataLength, -1 * (chosenButton + 1)};
-        delete[] commandMap[chosenButton].rawData; // delete the previously stored data
-        commandMap[chosenButton] = recCommand; // Write the received command to the map
-      }
-      else {
-        recCommand = {rawData, dataLength, chosenButton};
+        chosenButton = convertIndexToKeyCode(chosenButton);
       }
       
-      const char* jsonCommand = serializeCommand(recCommand);
+      Command* recCommand = new Command(rawData, dataLength, chosenButton);
+
+      if (!mappingToCustomButton) { // If mapping to a physycal button, save command on the terminal
+        // delete[] commandMap[chosenButton]; // delete the previously stored data
+        commandMap[chosenButton] = recCommand; // Write the received command to the map
+      }
+
+      const char* jsonCommand = recCommand->serialize(getButtonName(-1 * (recCommand->getKeyCode() + 1)));
       mqttClient->publishWithLog(TOPIC_IR_OUT, jsonCommand);
       delete[] jsonCommand;
 
@@ -829,7 +752,7 @@ void receiveConfig(){
     }
 
     rawData[dataLength - 1] = 1000; // Arbitrary trailing space
-    const Command recCommand = {rawData, dataLength};
+    Command *recCommand = new Command(rawData, dataLength, completedConfigsCount);
     configCommandsList[completedConfigsCount] = recCommand; // Save the received command to the list
 
     tft.setTextColor(TFT_DARKGREEN);
@@ -838,6 +761,7 @@ void receiveConfig(){
     completedConfigsCount++;
     drawReceiveSignal();
   }
+
   if(completedConfigsCount == configTextsLength){ // If all the config buttons have been recorded
     delay(500);
 
@@ -850,12 +774,12 @@ void receiveConfig(){
     JsonDocument* doc = new JsonDocument;
     JsonArray commandsArray = doc->to<JsonArray>();
     for(int i = 0; i < configTextsLength; i++){ // Loop through the recorded commands
-      if(configCommandsList[i].dataLength == 0) continue; // Skip if no command was recorded (skipped button)
+      if(configCommandsList[i]->getDataLength() == 0) continue; // Skip if no command was recorded (skipped button)
       if(i > BTN_COUNT - 1) { // If the button is an app button
-        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(appsConfigBtnCount), configTexts[i], configCommandsList[i]));
+        commandsArray.add(configCommandsList[i]->serializeToDoc(convertIndexToKeyCode(appsConfigBtnCount), configTexts[i], configCommandsList[i]));
         appsConfigBtnCount++;
       } else {
-        commandsArray.add(serializeCommandToDoc(convertKeyCodeToApp(i), configTexts[i], configCommandsList[i]));
+        commandsArray.add(serializeCommandToDoc(convertIndexToKeyCode(i), configTexts[i], configCommandsList[i]));
       }
     }
     String out;
@@ -889,12 +813,6 @@ void setup() {
   pinMode(MO_PIN, OUTPUT); 
   
   pinMode(BUZZER_PIN, OUTPUT);
-
-  // Initialize commands "map"
-  for(uint8_t i = 0; i < BTN_COUNT; i++){
-    commandMap[i].rawData = new uint16_t[0];
-    commandMap[i].dataLength = 0;
-  }
 
   // Screen setup
   tft.begin();
@@ -942,9 +860,9 @@ void loop() {
     int pressed = getButtonPressedIndex();
   
     if (pressed != -1) {
-      const Command command = commandMap[pressed];
+      Command *command = commandMap[pressed];
 
-      if (command.dataLength != 0){
+      if (command->getDataLength() != 0){
         emitData(command);
 
         startVibration(); // Vibrate after data sent

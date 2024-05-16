@@ -1,7 +1,6 @@
 // WioMqttClient.h
-#ifndef WIO_MQTT // prevent importing more than once
-#define WIO_MQTT
-
+#ifndef WIO_MQTT_H // prevent importing more than once
+#define WIO_MQTT_H
 
 #define MQTT_PING  // send "ping"s
 
