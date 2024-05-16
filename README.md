@@ -21,13 +21,20 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 
 ## Project Description
 
-The project is named “*WIOmote*”, symbolizes the integration of the Wio Seed Terminal as the core device with the functionality of a remote, representing the product's purpose. 
+The project is named “*WIOmote*”, symbolizes the integration of the Wio Seed Terminal as the core device with the functionality of a remote, representing the product's purpose.
 \
 \
-The product in itself is a universal remote, which is intended to serve as a substitute for standard infrared based remotes, consolidating control of several devices into one. This is achieved using an IR sensor and emitter, navigated by a wirelessly connected device. It allows for the collection of numerous configurations, as well as providing users with the option to share their configurations. Users can also send commands to a terminal for immediate action or schedule them for later execution. 
+The product in itself is a universal remote, which is intended to serve as a substitute for standard infrared based remotes, consolidating control of several devices into one.
+This is achieved using an IR sensor and emitter, navigated by a wirelessly connected device. It allows for the collection of numerous configurations, as well as providing users with the option to share their configurations. Users can also send commands to a terminal for immediate action or schedule them for later execution.
 \
 \
 For basic functions like turning on and off or basic navigation, the terminal can operate independently of a mobile device but is intended to be paired with a device to access the more advanced features.
+
+## Purpose and Benefits
+
+The Wiomote is intended to be a convenient and straightforward solution in managing multiple devices by centralizing the point of usage into one single device, accompanied by a simple and easily navigable interface for a seamless experience.
+Since the Wiomote is highly customizable, it is an excellent solution for users with limited vision or mobility, as well as for the family. The app allows creation of custom remote profiles, custom names for buttons as well as switching between remote configuration profiles, giving the user a lot of freedom in tailoring their experience.
+Furthermore, the Wiomote also suffices as an environmentally friendly alternative to physical remotes, as it can both serve as a back-up for existing remotes as well as replacing them. ’no more need to buy a new remote if it breaks, since it can easily be stored as one of many remote configurations in the app, saving both money and the environment.
 
 ## System Design
 
