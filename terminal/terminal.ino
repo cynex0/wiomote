@@ -1,3 +1,9 @@
+// Debugging modes
+//#define DEBUG_UI    // additional UI elements
+//#define DEBUG_LOG   // log events to serial
+//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
+
+
 #include <ArduinoJson.h>
 #include <ArduinoJson.hpp>
 
@@ -7,8 +13,6 @@
 
 #include <rpcWiFi.h>
 
-#include <PubSubClient.h>
-
 #include <IRLibSendBase.h>
 #include <IRLib_HashRaw.h>
 #include <IRLibCombo.h>
@@ -16,11 +20,8 @@
 
 #include <TFT_eSPI.h>
 
-// Debugging modes
-//#define DEBUG_UI    // additional UI elements
-//#define DEBUG_LOG   // log events to serial
-//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
-#define MQTT_PING  // send "ping"s and receive "pong"s
+#include "WioMqttClient.h" 
+
 
 // Button indexes for the array acting as a map
 #define BTN_COUNT       6
@@ -93,20 +94,6 @@
 #define CONNECTING   1
 #define DISCONNECTED 2
 
-// MQTT
-#define MQTT_SERVER "broker.hivemq.com"
-#define MQTT_PORT                 1883
-#define UUID_PREFIX     "WioTerminal-"
-
-#define TOPIC_CONN_OUT "wiomote/connection/terminal"
-#define TOPIC_IR_IN                 "wiomote/ir/app"
-#define TOPIC_IR_OUT           "wiomote/ir/terminal"
-#define TOPIC_CURRENT_MODE            "wiomote/mode"
-#define TOPIC_SWITCH_MODE     "wiomote/mode/request"
-
-#ifdef MQTT_PING
-#define MQTT_PING_INTERVAL 1000
-#endif
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
@@ -127,11 +114,7 @@
 #define BLT_ICON_COLOR_ON      TFT_CYAN
 #define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
-struct Command {
-  uint16_t *rawData;
-  uint8_t dataLength;
-  short keyCode;
-};
+#include "Command.h"
 
 // Button map to commands
 Command *commandMap = new Command[BTN_COUNT];
@@ -154,9 +137,8 @@ BLECharacteristic *pTxCharacteristic;
 bool bleDeviceConnected;
 bool bleOldDeviceConnected;
 
-// MQTT variables
-PubSubClient mqttClient(wifiClient);
-unsigned long lastPinged = 0;
+// Pointer to WioMqttClient instance. Initialized in setup()
+WioMqttClient *mqttClient;
 
 // Logic variables
 bool receiveMode = false;
@@ -257,43 +239,6 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
     }
 };
 
-// Modification of: https://hackmd.io/@amebaiot/H1uRHufYv#Code
-void setupBLE() {
-  BLEDevice::init("WIOmote");  // Define device name
-
-  bool bleDeviceConnected = false;
-  bool bleOldDeviceConnected = false;
-
-  // Create the BLE Server
-  bleServer = BLEDevice::createServer();
-  bleServer -> setCallbacks(new BluetoothServerCallbacks());
-
-  // Create the BLE Service
-  BLEService *bleService = bleServer -> createService(SERVICE_UUID);
-
-  // Create a BLE Characteristic
-  BLECharacteristic *rxCharacteristic = bleService->createCharacteristic(
-                              CHARACTERISTIC_UUID_RX,
-                              BLECharacteristic::PROPERTY_WRITE);
-  rxCharacteristic -> setAccessPermissions(GATT_PERM_READ | GATT_PERM_WRITE);           
-  rxCharacteristic -> setCallbacks(new BluetoothCallbacks());
-
-  // Start the service
-  bleService -> start();
-
-  // Start advertising
-  bleServer -> startAdvertising();
-}
-
-void mqttPublishWithLog(const char* topic, const char* payload) {
-  mqttClient.publish(topic, payload);
-  #ifdef DEBUG_LOG
-    Serial.print(F("Published message [")); Serial.print(topic); Serial.print(F("]: "));
-    Serial.println(payload);
-  #endif
-}
-
-// Received an MQTT message
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   char* buff_p = new char[length];
   for (int i = 0; i < length; i++) {
@@ -345,49 +290,32 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   delete[] buff_p;
 }
 
-void setupMQTT() {
-  mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-  mqttClient.setCallback(mqttCallback);
-  mqttClient.setBufferSize(8192);
-}
+// Modification of: https://hackmd.io/@amebaiot/H1uRHufYv#Code
+void setupBLE() {
+  BLEDevice::init("WIOmote");  // Define device name
 
-// Terminal commands to check if it works via Mosquitto
-// mosquitto_sub -v -h 'broker.hivemq.com' -p 1883 -t 'dit113/testwio12321Out'
-// mosquitto_pub -h 'broker.hivemq.com' -p 1883 -t "dit113/testwio12321In" -m "message to terminal"
+  bool bleDeviceConnected = false;
+  bool bleOldDeviceConnected = false;
 
-// Modification of: https://github.com/knolleary/pubsubclient/blob/master/examples/mqtt_basic/mqtt_basic.ino
-void updateMQTT() {
-  if (mqttClient.connected()) {
-    mqttClient.loop();
-    #ifdef MQTT_PING
-      if(millis() - lastPinged > MQTT_PING_INTERVAL) {
-        mqttPublishWithLog(TOPIC_CONN_OUT, "ping");
-        lastPinged = millis();
-      }
-    #endif
-  } else {
-    #ifdef DEBUG_LOG
-      Serial.println(F("Attempting MQTT connection..."));
-    #endif
-    
-    // Create a random client ID so that it does 
-    // not clash with other subscribed clients
-    const String clientId = UUID_PREFIX + String(random(0xffff), HEX);
+  // Create the BLE Server
+  bleServer = BLEDevice::createServer();
+  bleServer -> setCallbacks(new BluetoothServerCallbacks());
 
-    if (mqttClient.connect(clientId.c_str())) {
-      #ifdef DEBUG_LOG
-        Serial.println(F("Connected to MQTT server. Publishing a test message."));
-        mqttPublishWithLog(TOPIC_CONN_OUT, "Publish test WIO");
-      #endif
+  // Create the BLE Service
+  BLEService *bleService = bleServer -> createService(SERVICE_UUID);
 
-      mqttClient.subscribe(TOPIC_IR_IN); // topic to receive IR commands from the app
-      mqttClient.subscribe(TOPIC_SWITCH_MODE); // topic to switch to receiveMode when creating custom buttons in the app 
-    } else {
-      #ifdef DEBUG_LOG
-        Serial.print(F("Failed to connect to MQTT server - rc=" + mqttClient.state()));
-      #endif
-    }
-  }
+  // Create a BLE Characteristic
+  BLECharacteristic *rxCharacteristic = bleService->createCharacteristic(
+                              CHARACTERISTIC_UUID_RX,
+                              BLECharacteristic::PROPERTY_WRITE);
+  rxCharacteristic -> setAccessPermissions(GATT_PERM_READ | GATT_PERM_WRITE);           
+  rxCharacteristic -> setCallbacks(new BluetoothCallbacks());
+
+  // Start the service
+  bleService -> start();
+
+  // Start advertising
+  bleServer -> startAdvertising();
 }
 
 void WiFiEvent(const WiFiEvent_t event){
@@ -449,10 +377,10 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
-  decideWiFiConnectionIcon();
+    decideWiFiConnectionIcon();
     wifiConnectedPrevVal = true;
 
-    updateMQTT();
+    mqttClient->update();
   } 
   else {
     const char *ssid = wifiInfo["ssid"];
@@ -609,18 +537,14 @@ void startBuzzer() {
 }
 
 void updateBuzzer () { // Turns off buzzer after set duration
-  
   if (isBuzzing && (millis() - lastBuzzed >= buzzDuration)) { // Check if duration has passed
-
     analogWrite(BUZZER_PIN, 0);
     isBuzzing = false;
   }
 }
 
 void startVibration() {
-
   if (!(isVibrating)) {  // Ensures a vibration isnt already triggered
-    
     digitalWrite(MO_PIN, HIGH); // Start vibration
     lastVibrated = millis();    // Log the time of activation
     isVibrating = true;         // Flag for active vibration
@@ -628,33 +552,26 @@ void startVibration() {
 }
 
 void updateVibration() { // Turns off vibration after set duration
-  
   if (isVibrating && (millis() - lastVibrated >= vibDuration)) { // Check if duration has passed
-
     digitalWrite(MO_PIN, LOW);
     isVibrating = false;
   }
 }
 
 void drawReceiveSignal() {  // Draw circles for incomming signal
-
   for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
-
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
     delay(30);
   }
 
-  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
-    
+  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {  
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
     delay(30);
   }
 }
 
 void drawEmitSignal() {  // Draw circles for outgoing signal
-
-  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){
-    
+  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){    
     tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
     delay(30);
   }
@@ -708,7 +625,6 @@ void drawRemote(){
 
     // Draw bluetooth connection status icon
     drawBltConnectionIcon();
-    
   }
 }
 
@@ -792,7 +708,7 @@ void switchMode(){
   } 
   receiveMode = !receiveMode;
 
-  mqttPublishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
+  mqttClient->publishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
   
   if(!receiveMode){
     receiver.disableIRIn();
@@ -863,7 +779,7 @@ void receive() {
       }
       
       const char* jsonCommand = serializeCommand(recCommand);
-      mqttPublishWithLog(TOPIC_IR_OUT, jsonCommand);
+      mqttClient->publishWithLog(TOPIC_IR_OUT, jsonCommand);
       delete[] jsonCommand;
 
       tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
@@ -956,7 +872,8 @@ void setup() {
   #endif
 
   setupWiFi();
-  setupMQTT();
+  mqttClient = new WioMqttClient(wifiClient, *mqttCallback);
+  mqttClient->setup();
   setupBLE();
   
   // Set up pins
