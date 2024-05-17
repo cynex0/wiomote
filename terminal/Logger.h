@@ -13,10 +13,10 @@ public:
   void begin();
   void log(const char*);
   void log(const __FlashStringHelper*);
-  void log(const int message);
+  void log(const int);
   void logMqtt(const char*, const char*, MqttMessageDirection);
-  void logIR(Command* command);
-  void logWifiConnected(const String& ssid, const String& ip);
+  void logIR(Command*);
+  void logWifiConnected(const String&, const String&);
 };
 
 #endif
