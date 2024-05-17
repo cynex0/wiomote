@@ -33,6 +33,8 @@ void UIManager::drawButtonSelected(const char* buttonName) {
   tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE); // Erase "Select a button"
     
   tft.setTextSize(TEXT_SIZE_M);
+  tft.setTextColor(INVERTED_TEXT_COLOR);
+
   char message[16]; // Max length: 16 = 10 (" selected!") + 6 ("CUSTOM")
   sprintf(message, "%s selected!", buttonName);
   tft.drawString(message, CENTER_X, CENTER_Y);
@@ -72,6 +74,27 @@ void UIManager::drawEmitModeUI() {
   tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
   tft.drawCircle(15, 22, 6, ARROW_COLOR);
   tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
+}
+
+void UIManager::drawConfigDebugUI(const char** configTexts, int length){
+  tft.fillScreen(INVERTED_BG_COLOR);
+  tft.setTextColor(INVERTED_TEXT_COLOR);
+  tft.setTextSize(TEXT_SIZE_M);
+  for(int i = 0; i < length; i++){
+    tft.drawString(configTexts[i], 20, 20 + 20 * i); // Draw the labels for each config button
+  }
+}
+
+void UIManager::drawConfigSkippedButton(int position) {
+  tft.setTextSize(TEXT_SIZE_M);
+  tft.setTextColor(TFT_RED);
+  tft.drawString(F("SKIPPED"), 200, 20 + 20 * position); 
+}
+
+void UIManager::drawConfigRecordedButton(int position) {
+  tft.setTextSize(TEXT_SIZE_M);
+  tft.setTextColor(TFT_DARKGREEN);
+  tft.drawString(F("RECORDED"), 200, 20 + 20 * position); // Draw "RECORDED" next to the labels
 }
 
 void UIManager::redrawStatusIcons() {

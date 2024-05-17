@@ -24,6 +24,9 @@ public:
 
   void setup();
   void redraw(TerminalMode);
+  void drawConfigDebugUI(const char**, int);
+  void drawConfigSkippedButton(int);
+  void drawConfigRecordedButton(int);
   void updateBltIconStatus(bool, TerminalMode);
   void updateWiFiIconStatus(bool, TerminalMode);
   void drawButtonSelected(const char*);

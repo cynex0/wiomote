@@ -36,10 +36,8 @@
 // Motor pin
 #define MO_PIN D0
 
-// Buzzer pin
-#define BUZZER_PIN WIO_BUZZER 
-
 // Buzzer constants
+#define BUZZER_PIN WIO_BUZZER 
 #define BUZZER_FRQ 128 // Buzzer PWM frequency
 
 // Bluetooth
@@ -114,7 +112,7 @@ bool isBuzzing = false;
 #ifdef DEBUG_CONFIG_CREATOR
 int completedConfigsCount = 0;
 const int configTextsLength = 11; // number of config buttons that will be recorded (MAX 11)
-char** configTexts = new char*[configTextsLength]{ // label name for each config command
+const char** configTexts = new const char*[configTextsLength]{ // label name for each config command
   "POWER",
   "UP",
   "RIGHT",
@@ -449,10 +447,9 @@ void switchConfigMode(){ // Switches between config mode and normal mode
   }
   else {
     for(int i = 0; i < configTextsLength; i++){ // Clear the recorded commands
-      configCommandsList[i].rawData = new uint16_t[0];
-      configCommandsList[i].dataLength = 0;
+      configCommandsList[i] = nullptr;
     }
-    drawConfigDebug();
+    ui.drawConfigDebugUI(configTexts, configTextsLength);
   }
 }
 #endif
@@ -514,29 +511,14 @@ void receive() {
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
-void drawConfigDebug(){
-  tft.fillScreen(INVERTED_BG_COLOR);
-  tft.setTextColor(INVERTED_TEXT_COLOR);
-  tft.setTextSize(TEXT_SIZE_M);
-  for(int i = 0; i < configTextsLength; i++){
-    tft.drawString(configTexts[i], 20, 20 + 20 * i); // Draw the labels for each config button
-  }
-}
-
 void receiveConfig(){
   receiver.enableIRIn();
   
   // logic for skipping a command
-  if(digitalRead(CONFIG_SKIP_BTN) != prevConfigSkipBtnState){
-	  if(digitalRead(CONFIG_SKIP_BTN) == LOW){
-      tft.setTextColor(TFT_RED);
-      tft.drawString(F("SKIPPED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
-      const uint8_t dataLength = 0;
-      uint16_t *rawData = new uint16_t[dataLength];
-      completedConfigsCount++;
-    }
+  if (configSkipBtn.isPressed()) {
+    ui.drawConfigSkippedButton(completedConfigsCount); // Draw "RECORDED" next to the labels
+    completedConfigsCount++;
   }
-  prevConfigSkipBtnState = digitalRead(CONFIG_SKIP_BTN);
   
   if (receiver.getResults()){ // If a signal is received
     const uint8_t dataLength = recvGlobal.recvLength;
@@ -550,14 +532,13 @@ void receiveConfig(){
     Command *recCommand = new Command(rawData, dataLength, completedConfigsCount);
     configCommandsList[completedConfigsCount] = recCommand; // Save the received command to the list
 
-    tft.setTextColor(TFT_DARKGREEN);
-    tft.drawString(F("RECORDED"), 200, 20 + 20 * completedConfigsCount); // Draw "RECORDED" next to the labels
+    ui.drawConfigRecordedButton(completedConfigsCount);
 
     completedConfigsCount++;
-    drawReceiveSignal();
+    ui.playReceiveSignalAnimation();
   }
 
-  if(completedConfigsCount == configTextsLength){ // If all the config buttons have been recorded
+  if (completedConfigsCount == configTextsLength){ // If all the config buttons have been recorded
     delay(500);
 
     completedConfigsCount = 0;
@@ -569,17 +550,15 @@ void receiveConfig(){
     JsonDocument* doc = new JsonDocument;
     JsonArray commandsArray = doc->to<JsonArray>();
     for(int i = 0; i < configTextsLength; i++){ // Loop through the recorded commands
-      if(configCommandsList[i]->getDataLength() == 0) continue; // Skip if no command was recorded (skipped button)
+      if(configCommandsList[i] == nullptr) continue; // Skip if no command was recorded (skipped button)
+      commandsArray.add(configCommandsList[i]->serializeToDoc(configTexts[i]));
       if(i > BTN_COUNT - 1) { // If the button is an app button
-        commandsArray.add(configCommandsList[i]->serializeToDoc(convertIndexToKeyCode(appsConfigBtnCount), configTexts[i], configCommandsList[i]));
         appsConfigBtnCount++;
-      } else {
-        commandsArray.add(serializeCommandToDoc(convertIndexToKeyCode(i), configTexts[i], configCommandsList[i]));
       }
     }
     String out;
     serializeJson(*doc, out);
-    logger->log(doc);
+    logger->log(out.c_str());
   }
 }
 #endif
@@ -622,7 +601,7 @@ void loop() {
   }
 
   #ifdef DEBUG_CONFIG_CREATOR
-  if (configBtn.isPressed() && mode != TerminalMode::CLONE) {
+  if (configRecBtn.isPressed() && mode != TerminalMode::CLONE) {
     switchConfigMode();
     completedConfigsCount = 0;
   }
