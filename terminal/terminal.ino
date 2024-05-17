@@ -1,6 +1,6 @@
 // Debugging modes
-//#define DEBUG_UI    // additional UI elements
-//#define DEBUG_LOG   // log events to serial
+#define DEBUG_UI    // additional UI elements
+#define DEBUG_LOG   // log events to serial
 //#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
 
 #include <ArduinoJson.h>
@@ -21,6 +21,7 @@
 #include "WioMqttClient.h" 
 #include "Command.h"
 #include "Logger.h"
+#include "Button.h"
 
 
 // Button indexes for the array acting as a map
@@ -30,7 +31,19 @@
 #define RIGHT_BTN_INDEX 2 // -3 in the app
 #define DOWN_BTN_INDEX  3 // -4 in the app
 #define LEFT_BTN_INDEX  4 // -5 in the app
-#define PRESS_BTN_INDEX 5 // -6 in the app
+#define OK_BTN_INDEX 5 // -6 in the app
+
+// Buttons
+Button upBtn(WIO_5S_UP, "UP");
+Button downBtn(WIO_5S_DOWN, "DOWN");
+Button leftBtn(WIO_5S_LEFT, "LEFT");
+Button rightBtn(WIO_5S_RIGHT, "RIGHT");
+Button okBtn(WIO_5S_PRESS, "OK");
+Button powerBtn(WIO_KEY_C, "POWER");
+Button modeBtn(WIO_KEY_A, "MODE");
+// Devmode buttons
+Button configRecBtn(WIO_KEY_B, "REC");
+Button configSkipBtn(WIO_KEY_C, "SKIP");
 
 // Motor pin
 #define MO_PIN D0
@@ -72,17 +85,6 @@
 
 #define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
 #define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
-
-// Buttons
-#define UP_BTN        WIO_5S_UP
-#define DOWN_BTN    WIO_5S_DOWN
-#define LEFT_BTN    WIO_5S_LEFT
-#define RIGHT_BTN  WIO_5S_RIGHT
-#define PRESS_BTN  WIO_5S_PRESS
-#define POWER_BTN     WIO_KEY_C
-#define MODE_BTN      WIO_KEY_A
-#define CONFIG_REC_BTN  WIO_KEY_B
-#define CONFIG_SKIP_BTN WIO_KEY_C
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -144,12 +146,9 @@ WioMqttClient *mqttClient;
 // Logic variables
 bool receiveMode = false;
 bool configMode = false;
-bool prevModeBtnState = HIGH;
 int chosenButton = -1; // Button selection in the cloning mode
 bool chosenFromApp = false;
 bool mappingToCustomButton = false;
-bool prevConfigBtnState = HIGH;
-bool prevConfigSkipBtnState = HIGH;
 bool wifiConnectedPrevVal = true;
 bool bltConnectedPrevVal = false;
 
@@ -271,6 +270,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     delete command; // free the memory used for received command
   }
+  // Request to change the mode from the app
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
       if (!receiveMode) {
@@ -402,17 +402,17 @@ void updateNetwork() {
 int getButtonPressedIndex(){
   int out = -1;
 
-  if (digitalRead(PRESS_BTN) == LOW) {
-    out = PRESS_BTN_INDEX;
-  } else if (digitalRead(UP_BTN) == LOW) {
+  if (upBtn.isPressed()) {
     out = UP_BTN_INDEX;
-  } else if (digitalRead(DOWN_BTN) == LOW) {
+  } else if (downBtn.isPressed()) {
     out = DOWN_BTN_INDEX;
-  } else if (digitalRead(LEFT_BTN) == LOW) {
+  } else if (leftBtn.isPressed()) {
     out = LEFT_BTN_INDEX;
-  } else if (digitalRead(RIGHT_BTN) == LOW) {
+  } else if (rightBtn.isPressed()) {
     out = RIGHT_BTN_INDEX;
-  } else if (digitalRead(POWER_BTN) == LOW) {
+  } else if (okBtn.isPressed()) {
+    out = OK_BTN_INDEX;
+  } else if (powerBtn.isPressed()) {
     out = POWER_BTN_INDEX;
   }
 
@@ -437,7 +437,7 @@ const char* getButtonName(const int index) {
     case LEFT_BTN_INDEX:
       out = "LEFT";
       break;
-    case PRESS_BTN_INDEX:
+    case OK_BTN_INDEX:
       out = "OK";
       break;
   }
@@ -453,7 +453,6 @@ int convertIndexToKeyCode(const int index) { // Converts the index of the button
 
 void startBuzzer() {
   if (!(isBuzzing)) {  // Checks that buzzer isnt active already
-    
     analogWrite(BUZZER_PIN, BUZZER_FRQ); // Start buzzer
     lastBuzzed = millis();          // Log the time of activation
     isBuzzing = true;               // Flag that buzzer is active
@@ -803,17 +802,7 @@ void setup() {
   setupBLE();
   
   // Set up pins
-  pinMode(PRESS_BTN, INPUT_PULLUP);
-  pinMode(UP_BTN, INPUT_PULLUP);
-  pinMode(DOWN_BTN, INPUT_PULLUP);
-  pinMode(LEFT_BTN, INPUT_PULLUP);
-  pinMode(RIGHT_BTN, INPUT_PULLUP);
-  pinMode(WIO_KEY_A, INPUT_PULLUP);
-  pinMode(WIO_KEY_B, INPUT_PULLUP);
-  pinMode(WIO_KEY_C, INPUT_PULLUP);
-
-  pinMode(MO_PIN, OUTPUT); 
-  
+  pinMode(MO_PIN, OUTPUT);   
   pinMode(BUZZER_PIN, OUTPUT);
 
   // Screen setup
@@ -829,32 +818,22 @@ void loop() {
   updateVibration();
   updateBuzzer();
 
-  // Mode button logic
-  bool modeBtnState = digitalRead(MODE_BTN);
-  if (modeBtnState != prevModeBtnState && !configMode) {
-    if (modeBtnState == HIGH){
-      switchMode();
-    }
+  if (modeBtn.isPressed() && !configMode) {
+    switchMode();
   }
-  prevModeBtnState = modeBtnState;
 
   #ifdef DEBUG_CONFIG_CREATOR
-  // Config button logic
-  bool configBtnState = digitalRead(CONFIG_REC_BTN);
-  if (configBtnState != prevConfigBtnState && !receiveMode) {
-    if (configBtnState == HIGH){
-      switchConfigMode();
-      completedConfigsCount = 0;
-    }
+  if (configBtn.isPressed() && !receiveMode) {
+    switchConfigMode();
+    completedConfigsCount = 0;
   }
-  prevConfigBtnState = configBtnState;
   #endif
 
-  if (receiveMode){
+  if (receiveMode) {
     receive();
   }
   #ifdef DEBUG_CONFIG_CREATOR
-  else if (configMode){
+  else if (configMode) {
     receiveConfig();
   } 
   #endif
@@ -864,36 +843,33 @@ void loop() {
     if (pressed != -1) {
       Command *command = commandMap[pressed];
 
-      if (command != nullptr){
+      if (command != nullptr) {
         emitData(command);
 
         startVibration(); // Vibrate after data sent
 
         #ifdef DEBUG_UI // Flash a circle next to the pressed button label
           switch(pressed) {
-            case POWER_BTN:
+            case POWER_BTN_INDEX:
               tft.fillCircle(0, 16, 4, TFT_GREEN);
               break;
-            case UP_BTN:
+            case UP_BTN_INDEX:
               tft.fillCircle(5, 36, 4, TFT_GREEN);
               break;
-            case LEFT_BTN:
+            case LEFT_BTN_INDEX:
               tft.fillCircle(5, 56, 4, TFT_GREEN);
               break;
-            case RIGHT_BTN:
+            case RIGHT_BTN_INDEX:
               tft.fillCircle(5, 76, 4, TFT_GREEN);
               break;
-            case DOWN_BTN:
+            case DOWN_BTN_INDEX:
               tft.fillCircle(5, 96, 4, TFT_GREEN);
               break;
-            case PRESS_BTN:
+            case OK_BTN_INDEX:
               tft.fillCircle(5, 116, 4, TFT_GREEN);
               break;
           }
-        #endif
-        
-
-        #ifdef DEBUG_UI
+          delay(50);
           tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
         #endif
       }
@@ -906,15 +882,20 @@ void loop() {
 
     if (commandMap[POWER_BTN_INDEX] != nullptr) {
       tft.drawString(F("POWER"), 20, 20);
-    } else if (commandMap[UP_BTN_INDEX] != nullptr) {
+    } 
+    if (commandMap[UP_BTN_INDEX] != nullptr) {
       tft.drawString(F("UP"), 20, 40);
-    } else if (commandMap[LEFT_BTN_INDEX] != nullptr) {
+    } 
+    if (commandMap[LEFT_BTN_INDEX] != nullptr) {
       tft.drawString(F("LEFT"), 20, 60);
-    } else if (commandMap[RIGHT_BTN_INDEX] != nullptr) {
+    } 
+    if (commandMap[RIGHT_BTN_INDEX] != nullptr) {
       tft.drawString(F("RIGHT"), 20, 80);
-    } else if (commandMap[DOWN_BTN_INDEX] != nullptr) {
+    } 
+    if (commandMap[DOWN_BTN_INDEX] != nullptr) {
       tft.drawString(F("DOWN"), 20, 100);
-    } else if (commandMap[PRESS_BTN_INDEX] != nullptr) {
+    } 
+    if (commandMap[OK_BTN_INDEX] != nullptr) {
       tft.drawString(F("OK"), 20, 120);
     }
   #endif
