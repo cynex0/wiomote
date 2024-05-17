@@ -32,9 +32,9 @@ For basic functions like turning on and off or basic navigation, the terminal ca
 
 ## Purpose and Benefits
 
-The Wiomote is intended to be a convenient and straightforward solution in managing multiple devices by centralizing the point of usage into one single device, accompanied by a simple and easily navigable interface for a seamless experience.
-Since the Wiomote is highly customizable, it is an excellent solution for users with limited vision or mobility, as well as for the family. The app allows creation of custom remote profiles, custom names for buttons as well as switching between remote configuration profiles, giving the user a lot of freedom in tailoring their experience.
-Furthermore, the Wiomote also suffices as an environmentally friendly alternative to physical remotes, as it can both serve as a back-up for existing remotes as well as replacing them. ’no more need to buy a new remote if it breaks, since it can easily be stored as one of many remote configurations in the app, saving both money and the environment.
+The WIOmote is intended to be a convenient and straightforward solution in managing multiple devices by centralizing the point of usage into one single device, accompanied by a simple and easily navigable interface for a seamless experience.
+Since the WIOmote is highly customizable, it is an excellent solution for users with limited vision or mobility, as well as for the family. The app allows creation of custom remote profiles, custom names for buttons as well as switching between remote configuration profiles, giving the user a lot of freedom in tailoring their experience.
+Furthermore, the WIOmote also suffices as an environmentally friendly alternative to physical remotes, as it can both serve as a back-up for existing remotes as well as replacing them. ’no more need to buy a new remote if it breaks, since it can easily be stored as one of many remote configurations in the app, saving both money and the environment.
 
 ## System Design
 
