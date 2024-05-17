@@ -1,7 +1,6 @@
-// Debugging modes
-//#define DEBUG_UI    // additional UI elements
-//#define DEBUG_LOG   // log events to serial
-//#define DEBUG_CONFIG_CREATOR // allows to quickly create a config with a middle button (key B) 
+// Developer modes
+//#define DEBUG_LOG             // log events to serial
+//#define DEBUG_CONFIG_CREATOR  // unlocks config creation mode (key B) 
 
 #include <ArduinoJson.h>
 
@@ -22,8 +21,7 @@
 #include "Command.h"
 #include "Logger.h"
 #include "Button.h"
-#include "UIMacros.h"
-#include "ConnectivityIcons.h"
+#include "UIManager.h"
 
 
 // Button indexes for the array acting as a map
@@ -33,19 +31,7 @@
 #define RIGHT_BTN_INDEX 2 // -3 in the app
 #define DOWN_BTN_INDEX  3 // -4 in the app
 #define LEFT_BTN_INDEX  4 // -5 in the app
-#define OK_BTN_INDEX 5 // -6 in the app
-
-// Buttons
-Button upBtn(WIO_5S_UP, "UP");
-Button downBtn(WIO_5S_DOWN, "DOWN");
-Button leftBtn(WIO_5S_LEFT, "LEFT");
-Button rightBtn(WIO_5S_RIGHT, "RIGHT");
-Button okBtn(WIO_5S_PRESS, "OK");
-Button powerBtn(WIO_KEY_C, "POWER");
-Button modeBtn(WIO_KEY_A, "MODE");
-// Devmode buttons
-Button configRecBtn(WIO_KEY_B, "REC");
-Button configSkipBtn(WIO_KEY_C, "SKIP");
+#define OK_BTN_INDEX 5    // -6 in the app
 
 // Motor pin
 #define MO_PIN D0
@@ -55,37 +41,6 @@ Button configSkipBtn(WIO_KEY_C, "SKIP");
 
 // Buzzer constants
 #define BUZZER_FRQ 128 // Buzzer PWM frequency
-
-// UI elements
-#define CIRCLE_COLOR        TFT_BLUE
-#define OUTER_CIRCLE_COLOR TFT_WHITE
-#define CIRCLE_RADIUS             45
-#define CENTER_X                 160  // Middle point of screen X-axis
-#define CENTER_Y                 120  // Middle point of screen Y-axis
-#define SCREEN_ROTATION            3
-
-// Constants for signal icon
-#define SIGNAL_ICON_X          280  // X placement of icon
-#define SIGNAL_ICON_Y          200  // Y placement of icon
-#define ICON_INNER_RADIUS        5  // Radius of the smallest cirlce
-#define ICON_OUTER_RADIUS       30  // Radius of the largest circle
-#define ICON_RING_SPACING        5  // Space between every ring in icon
-#define ICON_SIGNAL_COLOR TFT_BLUE  // Color of the moving signal rings
-
-#define ARROW_TOP_OFFSET  100  // Distance from middle to the top of the arrows
-#define ARROW_BASE_OFFSET  60  // Distance from middle to bottom sides of arrows
-#define ARROW_LENGTH       40  // Value of arrow length
-#define ARROW_COLOR TFT_WHITE
-
-#define TEXT_SIZE_L 3
-#define TEXT_SIZE_M 2
-#define TEXT_SIZE_S 1
-
-#define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
-#define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
-
-#define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
-#define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
 
 // Bluetooth
 #define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -104,11 +59,23 @@ Button configSkipBtn(WIO_KEY_C, "SKIP");
 Logger* logger = new Logger(); 
 #endif
 
+// Buttons
+Button upBtn(WIO_5S_UP, "UP");
+Button downBtn(WIO_5S_DOWN, "DOWN");
+Button leftBtn(WIO_5S_LEFT, "LEFT");
+Button rightBtn(WIO_5S_RIGHT, "RIGHT");
+Button okBtn(WIO_5S_PRESS, "OK");
+Button powerBtn(WIO_KEY_C, "POWER");
+Button modeBtn(WIO_KEY_A, "MODE");
+// Devmode buttons
+Button configRecBtn(WIO_KEY_B, "REC");
+Button configSkipBtn(WIO_KEY_C, "SKIP");
+
 // Button map to commands
 Command **commandMap = new Command*[BTN_COUNT];
 
-// LCD 
-TFT_eSPI tft;
+// UI
+UIManager ui;
 
 // IR emitter and receiver
 IRsendRaw emitter;
@@ -129,13 +96,10 @@ bool bleOldDeviceConnected;
 WioMqttClient *mqttClient;
 
 // Logic variables
-bool receiveMode = false;
-bool configMode = false;
+TerminalMode mode = TerminalMode::EMIT;
 int chosenButton = -1; // Button selection in the cloning mode
 bool chosenFromApp = false;
 bool mappingToCustomButton = false;
-bool wifiConnectedPrevVal = true;
-bool bltConnectedPrevVal = false;
 
 // Motor variables
 const int vibDuration = 200;
@@ -166,22 +130,6 @@ char** configTexts = new char*[configTextsLength]{ // label name for each config
 Command **configCommandsList = new Command*[configTextsLength]; // array to store recorded commands that will be later serialized into one config
 #endif
 
-void decideBltConnectionIcon(){
-  // decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode || configMode) return;
-  if(bleDeviceConnected){
-    if(bltConnectedPrevVal == true){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(tft, bleDeviceConnected); // if different - draw the icon
-  }else{
-    if(bltConnectedPrevVal == false){
-      return; // if the bluetooth connection status is the same as before - do nothing
-    }
-    drawBltConnectionIcon(tft, bleDeviceConnected); // if different - draw the icon
-  }
-}
-
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
@@ -189,8 +137,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
       #endif
 
       bleDeviceConnected = true;
-      decideBltConnectionIcon();
-      bltConnectedPrevVal = true;
+      ui.updateBltIconStatus(true, mode);
     }
 
     void onDisconnect(BLEServer* bleServer) {
@@ -199,8 +146,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
       #endif
 
       bleDeviceConnected = false;
-      decideBltConnectionIcon();
-      bltConnectedPrevVal = false;
+      ui.updateBltIconStatus(false, mode);
     }
 };
 
@@ -236,18 +182,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   #ifdef DEBUG_LOG
     logger->logMqtt(topic, buff_p, MqttMessageDirection::IN);
   #endif
-  #ifdef DEBUG_UI
-    drawRemote();
-    tft.setTextSize(TEXT_SIZE_S);
-    tft.setCursor(0, TFT_WIDTH - 2); // width is height :)
-    tft.print(F("MQTT: ")); tft.print(F(buff_p));
-  #endif
 
   // A command sent from the app
   if (strcmp(topic, TOPIC_IR_IN) == 0) {
     Command* command = new Command(buff_p);
 
-    if (!receiveMode) { // if in receive mode, emit the signal
+    if (mode == TerminalMode::EMIT) { // if in emit mode, emit the signal
       emitData(command);
     } else { // if in cloning mode, register the received button for cloning
       chosenButton = -1 * (command->getKeyCode() + 1);
@@ -258,16 +198,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Request to change the mode from the app
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
-      if (!receiveMode) {
-        switchMode();
+      if (mode != TerminalMode::CLONE) {
+        changeMode(TerminalMode::CLONE);
       } 
       chosenButton = atoi(buff_p + 5); // skip 5 characters ("CLONE") to get the keyCode
       chosenFromApp = true;
       mappingToCustomButton = true;
     }
     else if (strcmp(buff_p, "EMIT") == 0) { // emit mode requested
-      if (receiveMode) {
-        switchMode();
+      if (mode != TerminalMode::EMIT) {
+        changeMode(TerminalMode::EMIT);
       }
     }
   }
@@ -359,9 +299,6 @@ void updateNetwork() {
 
     wifiDeviceConnected = CONNECTED;
 
-    decideWiFiConnectionIcon();
-    wifiConnectedPrevVal = true;
-
     mqttClient->update();
   } 
   else {
@@ -376,12 +313,11 @@ void updateNetwork() {
 
       wifiDeviceConnected = CONNECTING;
 
-    decideWiFiConnectionIcon();
-      wifiConnectedPrevVal = false;
-
       WiFi.begin(ssid, wifiInfo["password"], 0L, stringToMAC(wifiInfo["bssid"]));
     }
   }
+
+  ui.updateWiFiIconStatus(wifiDeviceConnected == CONNECTED, mode);
 }
 
 int getButtonPressedIndex(){
@@ -466,97 +402,11 @@ void updateVibration() { // Turns off vibration after set duration
   }
 }
 
-void drawReceiveSignal() {  // Draw circles for incomming signal
-  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {
-    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
-    delay(30);
-  }
-
-  for (int radius = ICON_OUTER_RADIUS; radius >= ICON_INNER_RADIUS; radius -= ICON_RING_SPACING) {  
-    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, INVERTED_BG_COLOR);
-    delay(30);
-  }
-}
-
-void drawEmitSignal() {  // Draw circles for outgoing signal
-  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING){    
-    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, ICON_SIGNAL_COLOR);
-    delay(30);
-  }
-
-  for (int radius = ICON_INNER_RADIUS; radius <= ICON_OUTER_RADIUS; radius += ICON_RING_SPACING) {
-    tft.drawCircle(SIGNAL_ICON_X, SIGNAL_ICON_Y, radius, DEFAULT_BG_COLOR);
-    delay(30);
-  }
-}
-
-void drawRemote(){
-  if (receiveMode) {
-    tft.fillScreen(INVERTED_BG_COLOR);
-    tft.setTextColor(INVERTED_TEXT_COLOR);
-    tft.setTextSize(TEXT_SIZE_M);
-	  tft.drawString(F("Select a button"), CENTER_X, CENTER_Y);
-  } else {
-    // Screen background
-    tft.fillScreen(DEFAULT_BG_COLOR);
-
-    // Middle button 
-    tft.drawCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS + 2, OUTER_CIRCLE_COLOR);
-    tft.fillCircle(CENTER_X, CENTER_Y, CIRCLE_RADIUS, CIRCLE_COLOR);
-    tft.setTextSize(TEXT_SIZE_L);
-    tft.setTextColor(DEFAULT_TEXT_COLOR);;
-    tft.drawString(F("OK"), CENTER_X, CENTER_Y);
-
-    // Draw top arrow
-    tft.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
-    tft.drawLine(CENTER_X, CENTER_Y - ARROW_TOP_OFFSET, CENTER_X - ARROW_LENGTH, CENTER_Y - ARROW_BASE_OFFSET, ARROW_COLOR);
-
-    // Draw right arrow
-    tft.drawLine(CENTER_X + ARROW_TOP_OFFSET, CENTER_Y, CENTER_X + ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
-    tft.drawLine(CENTER_X + ARROW_TOP_OFFSET, CENTER_Y, CENTER_X + ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
-
-    // Draw bottom arrow
-    tft.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X - ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
-    tft.drawLine(CENTER_X, CENTER_Y + ARROW_TOP_OFFSET, CENTER_X + ARROW_LENGTH, CENTER_Y + ARROW_BASE_OFFSET, ARROW_COLOR);
-
-    // Draw left arrow
-    tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y - ARROW_LENGTH, ARROW_COLOR);
-    tft.drawLine(CENTER_X - ARROW_TOP_OFFSET, CENTER_Y, CENTER_X - ARROW_BASE_OFFSET, CENTER_Y + ARROW_LENGTH, ARROW_COLOR);
-
-    // Draw power icon
-    tft.drawRect(5, 9, 21, 2, ARROW_COLOR);
-    tft.drawCircle(15, 22, 6, ARROW_COLOR);
-    tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
-
-    // Draw wifi connection status icon
-    drawWiFiConnectionIcon(tft, wifiDeviceConnected);
-
-    // Draw bluetooth connection status icon
-    drawBltConnectionIcon(tft, bleDeviceConnected);
-  }
-}
-
-void decideWiFiConnectionIcon(){
-  // decide the color according to connection status and previous status so it doesn't loop
-  if(receiveMode || configMode) return;
-  if(wifiDeviceConnected == CONNECTED){
-    if(wifiConnectedPrevVal == true){
-      return; // if the wifi connection status is the same as before - do nothing
-    }
-    drawWiFiConnectionIcon(tft, wifiDeviceConnected); // if different - draw the icon
-  }else{
-    if(wifiConnectedPrevVal == false){
-      return; // if the wifi connection status is the same as before - do nothing
-    }
-    drawWiFiConnectionIcon(tft, wifiDeviceConnected); // if different - draw the icon
-  }
-}
-
 void emitData(Command *command){
   if (command != nullptr){
 	  if(command->getDataLength() == 0) return; // command is empty, do nothing
       emitter.send(command->getRawData(), command->getDataLength(), CARRIER_FREQUENCY_KHZ);
-      drawEmitSignal();
+      ui.playEmitSignalAnimation();
 
       #ifdef DEBUG_LOG
         logger->logIR(command);
@@ -564,37 +414,46 @@ void emitData(Command *command){
   }
 }
 
-void switchMode(){
-  if (receiveMode) {
+void switchMode() {
+  if (mode == TerminalMode::CLONE) 
+    changeMode(TerminalMode::EMIT);
+  else if (mode == TerminalMode::EMIT)
+    changeMode(TerminalMode::CLONE);
+}
+
+void changeMode(TerminalMode newMode){
+  if (mode == TerminalMode::CLONE) {
     chosenButton = -1; // Forget the chosen button when the user exits cloning mode
     mappingToCustomButton = false;
     receiver.disableIRIn(); // Disable IR input when exiting cloning mode to prevent reading random signals
   } 
-  receiveMode = !receiveMode;
 
-  mqttClient->publishWithLog(TOPIC_CURRENT_MODE, receiveMode ? "CLONE" : "EMIT");
+  mode = newMode;
+  startBuzzer();
+  ui.redraw(mode);
+
+  if (mode == TerminalMode::CLONE)
+    mqttClient->publishWithLog(TOPIC_CURRENT_MODE, "CLONE");
+  else if (mode == TerminalMode::EMIT)
+    mqttClient->publishWithLog(TOPIC_CURRENT_MODE, "EMIT");
   
-  if(!receiveMode){
+  if (mode != TerminalMode::CLONE){
     receiver.disableIRIn();
   }
-  startBuzzer();
-  drawRemote();
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
 void switchConfigMode(){ // Switches between config mode and normal mode
-  configMode = !configMode;
-  if(configMode){ // If in config mode
+  if (mode == TerminalMode::CONFIG) {
+    changeMode(TerminalMode::EMIT);
+  }
+  else {
     for(int i = 0; i < configTextsLength; i++){ // Clear the recorded commands
       configCommandsList[i].rawData = new uint16_t[0];
       configCommandsList[i].dataLength = 0;
     }
-      drawConfigDebug();
-  }else{
-    receiver.disableIRIn();
-    drawRemote();
+    drawConfigDebug();
   }
-  startBuzzer();
 }
 #endif
 
@@ -602,15 +461,8 @@ void receive() {
   int pressedButton = getButtonPressedIndex();
   if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
     if(!chosenFromApp) chosenButton = pressedButton;
-    tft.fillRect(0, CENTER_Y - tft.fontHeight(TEXT_SIZE_M)/2, TFT_HEIGHT, tft.fontHeight(TEXT_SIZE_M), TFT_WHITE);
-    
-    tft.setTextSize(TEXT_SIZE_M);
-    char message[16]; // Max length: 16 = 10 (" selected!") + 6 ("CUSTOM")
-    sprintf(message, "%s selected!", mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
-    tft.drawString(message, CENTER_X, CENTER_Y);
-    
-    tft.setTextSize(TEXT_SIZE_S);
-    tft.drawString(F("Waiting for IR."), CENTER_X, CENTER_Y + 20);
+
+    ui.drawButtonSelected(mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
     
     // Reset logic values to not enter this block every loop
     chosenFromApp = false;
@@ -645,10 +497,9 @@ void receive() {
       mqttClient->publishWithLog(TOPIC_IR_OUT, jsonCommand);
       delete[] jsonCommand;
 
-      tft.drawString(F("Recorded!"), CENTER_X, CENTER_Y + 40);
-      drawReceiveSignal();
+      ui.playReceiveSignalAnimation();
 
-      drawRemote(); // Reset the UI
+      ui.redraw(mode); // Reset the UI
 
       if (mappingToCustomButton) {
         switchMode(); // don't continue cloning if mapping to a custom button
@@ -757,11 +608,8 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
 
   // Screen setup
-  tft.begin();
-  tft.setRotation(SCREEN_ROTATION);
-  tft.setTextDatum(MC_DATUM);
-
-  drawRemote();
+  ui.setup();
+  ui.redraw(mode);
 }
 
 void loop() {
@@ -769,85 +617,38 @@ void loop() {
   updateVibration();
   updateBuzzer();
 
-  if (modeBtn.isPressed() && !configMode) {
+  if (modeBtn.isPressed() && mode != TerminalMode::CONFIG) {
     switchMode();
   }
 
   #ifdef DEBUG_CONFIG_CREATOR
-  if (configBtn.isPressed() && !receiveMode) {
+  if (configBtn.isPressed() && mode != TerminalMode::CLONE) {
     switchConfigMode();
     completedConfigsCount = 0;
   }
   #endif
 
-  if (receiveMode) {
-    receive();
-  }
-  #ifdef DEBUG_CONFIG_CREATOR
-  else if (configMode) {
-    receiveConfig();
-  } 
-  #endif
-  else { // Detecting button presses
-    int pressed = getButtonPressedIndex();
+  switch (mode) {
+    case TerminalMode::CLONE:
+      receive();
+      break;
+    case TerminalMode::CONFIG:
+      #ifdef DEBUG_CONFIG 
+      receiveConfig();
+      #endif
+      break;
+    case TerminalMode::EMIT:
+      int pressed = getButtonPressedIndex();
   
-    if (pressed != -1) {
-      Command *command = commandMap[pressed];
+      if (pressed != -1) {
+        Command *command = commandMap[pressed];
 
-      if (command != nullptr) {
-        emitData(command);
+        if (command != nullptr) {
+         emitData(command);
 
-        startVibration(); // Vibrate after data sent
-
-        #ifdef DEBUG_UI // Flash a circle next to the pressed button label
-          switch(pressed) {
-            case POWER_BTN_INDEX:
-              tft.fillCircle(0, 16, 4, TFT_GREEN);
-              break;
-            case UP_BTN_INDEX:
-              tft.fillCircle(5, 36, 4, TFT_GREEN);
-              break;
-            case LEFT_BTN_INDEX:
-              tft.fillCircle(5, 56, 4, TFT_GREEN);
-              break;
-            case RIGHT_BTN_INDEX:
-              tft.fillCircle(5, 76, 4, TFT_GREEN);
-              break;
-            case DOWN_BTN_INDEX:
-              tft.fillCircle(5, 96, 4, TFT_GREEN);
-              break;
-            case OK_BTN_INDEX:
-              tft.fillCircle(5, 116, 4, TFT_GREEN);
-              break;
-          }
-          delay(50);
-          tft.fillRect(0, 0, 10, 124, TFT_BLACK); // Erase the circle
-        #endif
+         startVibration(); // Vibrate after data sent
+        }
       }
-    }
+      break;
   }
-
-  // DEBUG: print configured buttons on screen
-  #ifdef DEBUG_UI
-    tft.setTextSize(TEXT_SIZE_M);
-
-    if (commandMap[POWER_BTN_INDEX] != nullptr) {
-      tft.drawString(F("POWER"), 20, 20);
-    } 
-    if (commandMap[UP_BTN_INDEX] != nullptr) {
-      tft.drawString(F("UP"), 20, 40);
-    } 
-    if (commandMap[LEFT_BTN_INDEX] != nullptr) {
-      tft.drawString(F("LEFT"), 20, 60);
-    } 
-    if (commandMap[RIGHT_BTN_INDEX] != nullptr) {
-      tft.drawString(F("RIGHT"), 20, 80);
-    } 
-    if (commandMap[DOWN_BTN_INDEX] != nullptr) {
-      tft.drawString(F("DOWN"), 20, 100);
-    } 
-    if (commandMap[OK_BTN_INDEX] != nullptr) {
-      tft.drawString(F("OK"), 20, 120);
-    }
-  #endif
 }
