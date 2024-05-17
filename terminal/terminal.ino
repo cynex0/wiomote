@@ -20,6 +20,7 @@
 
 #include "WioMqttClient.h" 
 #include "Command.h"
+#include "Logger.h"
 
 
 // Button indexes for the array acting as a map
@@ -111,6 +112,11 @@
 #define BLT_ICON_COLOR_ON      TFT_CYAN
 #define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
+// Define a common logger for all classes if in debug mode
+#if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) 
+Logger* logger = new Logger(); 
+#endif
+
 // Button map to commands
 Command **commandMap = new Command*[BTN_COUNT];
 
@@ -195,7 +201,7 @@ void decideBltConnectionIcon(){
 class BluetoothServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println(F("Bluetooth connected"));
+        logger->log(F("Bluetooth connected\n"));
       #endif
 
       bleDeviceConnected = true;
@@ -205,7 +211,7 @@ class BluetoothServerCallbacks: public BLEServerCallbacks {
 
     void onDisconnect(BLEServer* bleServer) {
       #ifdef DEBUG_LOG
-        Serial.println(F("Bluetooth disconnected"));
+        logger->log(F("Bluetooth disconnected\n"));
       #endif
 
       bleDeviceConnected = false;
@@ -228,8 +234,9 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
       wifiDeviceConnected = DISCONNECTED;
 
       #ifdef DEBUG_LOG
-        Serial.println(F(data));
-        Serial.println(F("Cleared existing connections"));
+        logger->log(F(data));
+        logger->log("\n");
+        logger->log(F("Cleared existing connections\n"));
       #endif
     }
 };
@@ -243,9 +250,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 
   #ifdef DEBUG_LOG
-    Serial.print(F("Message arrived [")); Serial.print(F(topic)); Serial.print(F("] "));
-
-    Serial.println(F(buff_p));
+    logger->logMqtt(topic, buff_p, MqttMessageDirection::IN);
   #endif
   #ifdef DEBUG_UI
     drawRemote();
@@ -258,13 +263,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   if (strcmp(topic, TOPIC_IR_IN) == 0) {
     Command* command = new Command(buff_p);
 
-    if (!receiveMode) {
+    if (!receiveMode) { // if in receive mode, emit the signal
       emitData(command);
-    } else {
+    } else { // if in cloning mode, register the received button for cloning
       chosenButton = -1 * (command->getKeyCode() + 1);
       chosenFromApp = true;
     }
-    delete command;
+    delete command; // free the memory used for received command
   }
   else if (strcmp(topic, TOPIC_SWITCH_MODE) == 0) {
     if (strstr(buff_p, "CLONE") != NULL) { // cloning mode requested (Message format: CLONE<keyCode>)
@@ -363,10 +368,7 @@ void updateNetwork() {
   if(WiFi.isConnected()) {
     #ifdef DEBUG_LOG
       if(wifiDeviceConnected != CONNECTED) {
-        Serial.print(F("Connected to "));
-		    Serial.println(WiFi.SSID());
-        Serial.print(F("IP address: "));
-        Serial.println(WiFi.localIP());
+        logger->logWifiConnected(WiFi.SSID(), WiFi.localIP().toString());
       }
     #endif
 
@@ -382,8 +384,9 @@ void updateNetwork() {
 
     if(wifiDeviceConnected != CONNECTING) {  
       #ifdef DEBUG_LOG
-        Serial.print(F("Connecting to "));
-        Serial.println(F(ssid));
+        logger->log(F("Connecting to ")); 
+        logger->log(ssid);
+        logger->log("\n");
       #endif
 
       wifiDeviceConnected = CONNECTING;
@@ -600,25 +603,14 @@ void drawBltConnectionIcon(){
 }
 
 void emitData(Command *command){
-
-  if (command->getRawData() != nullptr){
+  if (command != nullptr){
 	  if(command->getDataLength() == 0) return; // command is empty, do nothing
       emitter.send(command->getRawData(), command->getDataLength(), CARRIER_FREQUENCY_KHZ);
       drawEmitSignal();
 
       #ifdef DEBUG_LOG
-       Serial.print(F("Signal sent: [")); Serial.print(command->getDataLength()); Serial.print(F("]{"));
-
-       for (uint8_t i = 0; i < command->getDataLength(); i++) {
-         Serial.print(command->getRawData()[i]);
-
-          if (i != command->getDataLength() - 1) {
-            Serial.print(F(", "));
-          }
-        }
-
-      Serial.println(F("}"));
-    #endif
+        logger->logIR(command);
+      #endif
   }
 }
 
@@ -690,18 +682,16 @@ void receive() {
 
       rawData[dataLength - 1] = 1000; // Arbitrary trailing space
 
-      if (!mappingToCustomButton) {
-        chosenButton = convertIndexToKeyCode(chosenButton);
-      }
-      
-      Command* recCommand = new Command(rawData, dataLength, chosenButton);
-
+      Command* command;
       if (!mappingToCustomButton) { // If mapping to a physycal button, save command on the terminal
-        if (commandMap[chosenButton] != nullptr) delete[] commandMap[chosenButton]; // delete the previously stored data
-        commandMap[chosenButton] = recCommand; // Write the received command to the map
+        command = new Command(rawData, dataLength, convertIndexToKeyCode(chosenButton));
+        commandMap[chosenButton] = command; // Write the received command to the map
+      } else {
+        // if recording a custom button, chosenButton is sent from the app and is already a keyCode
+        command = new Command(rawData, dataLength, chosenButton); 
       }
 
-      const char* jsonCommand = recCommand->serialize(getButtonName(-1 * (recCommand->getKeyCode() + 1)));
+      const char* jsonCommand = command->serialize(getButtonName(-1 * (command->getKeyCode() + 1)));
       mqttClient->publishWithLog(TOPIC_IR_OUT, jsonCommand);
       delete[] jsonCommand;
 
@@ -710,8 +700,12 @@ void receive() {
 
       drawRemote(); // Reset the UI
 
+      if (mappingToCustomButton) {
+        switchMode(); // don't continue cloning if mapping to a custom button
+        delete command; // the terminal does not store commands for custom buttons, memory can be safely freed
+      }
+
       // Reset logic variables
-      if (mappingToCustomButton) switchMode(); // don't continue cloning if mapping to a custom button
       mappingToCustomButton = false;
       chosenButton = -1;
     }
@@ -784,22 +778,27 @@ void receiveConfig(){
     }
     String out;
     serializeJson(*doc, out);
-    Serial.println(out);
+    logger->log(doc);
   }
 }
 #endif
 
 void setup() {
-  #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) // Serial is only needed if debugging is enabled
-  Serial.begin(9600); // Start serial
-  while(!Serial); // Wait for serial
+  #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR)
+  logger->begin();
+  #endif
+
+  // Create an MQTT client depending on if debug is enabled
+  #ifdef DEBUG_LOG
+  mqttClient = new WioMqttClient(wifiClient, *mqttCallback, logger);
+  #else
+  mqttClient = new WioMqttClient(wifiClient, *mqttCallback);
   #endif
 
   for (int i = 0; i < BTN_COUNT; i++)
-    commandMap[i] == nullptr; // initialize array with null pointers to avoid garbage data
+    commandMap[i] = nullptr; // initialize array with null pointers to avoid garbage data
 
   setupWiFi();
-  mqttClient = new WioMqttClient(wifiClient, *mqttCallback);
   mqttClient->setup();
   setupBLE();
   
@@ -865,7 +864,7 @@ void loop() {
     if (pressed != -1) {
       Command *command = commandMap[pressed];
 
-      if (command != nullptr && command->getDataLength() != 0){
+      if (command != nullptr){
         emitData(command);
 
         startVibration(); // Vibrate after data sent
@@ -919,5 +918,4 @@ void loop() {
       tft.drawString(F("OK"), 20, 120);
     }
   #endif
-  delay(50); // Slow down the loop
 }

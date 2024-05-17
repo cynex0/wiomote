@@ -2,14 +2,11 @@
 #ifndef WIO_MQTT_H // prevent importing more than once
 #define WIO_MQTT_H
 
-#define MQTT_PING  // send "ping"s
-
-#ifdef MQTT_PING
 #define MQTT_PING_INTERVAL 1000 // interval between pings
-#endif
 
 #include <PubSubClient.h>
 #include <rpcWiFi.h>
+#include "Logger.h"
 
 // Terminal commands to check if it works via Mosquitto
 // mosquitto_sub -v -h 'broker.hivemq.com' -p 1883 -t 'dit113/testwio12321Out'
@@ -34,13 +31,16 @@ private:
   WiFiClient wifiClient; // wifiClient reference needs to be stored for PubSubClient to function
   PubSubClient mqttClient;
   MqttCallback callback; // pointer to the callback method, automatically executed when a message is received
+  Logger* logger; // pointer to logger object
+  bool loggingEnabled;
   unsigned long lastPinged;
 
 public:
-  WioMqttClient(WiFiClient wifiClient, MqttCallback mqttCallback);
+  WioMqttClient(WiFiClient, MqttCallback);
+  WioMqttClient(WiFiClient, MqttCallback, Logger*);
   void setup();
   void update();
-  void publishWithLog(const char* topic, const char* payload);
+  void publishWithLog(const char*, const char*);
 };
 
 #endif
