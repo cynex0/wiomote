@@ -21,6 +21,8 @@
 #include "WioMqttClient.h" 
 #include "Command.h"
 #include "Logger.h"
+#include "UIMacros.h"
+#include "ConnectivityIcons.h"
 
 
 // Button indexes for the array acting as a map
@@ -62,17 +64,6 @@
 #define ARROW_LENGTH       40  // Value of arrow length
 #define ARROW_COLOR TFT_WHITE
 
-#define TEXT_SIZE_L 3
-#define TEXT_SIZE_M 2
-#define TEXT_SIZE_S 1
-
-#define ICON_COLOR      TFT_LIGHTGREY  // Define color for connection icon
-#define DEFAULT_TEXT_COLOR  TFT_WHITE  // Default text color on dark bg
-#define INVERTED_TEXT_COLOR TFT_BLACK  // Inverted text color for light bg
-
-#define DEFAULT_BG_COLOR   TFT_BLACK   // Define standard background color
-#define INVERTED_BG_COLOR  TFT_WHITE   // Inverted background color
-
 // Buttons
 #define UP_BTN        WIO_5S_UP
 #define DOWN_BTN    WIO_5S_DOWN
@@ -95,22 +86,6 @@
 
 // IR
 #define CARRIER_FREQUENCY_KHZ 38
-
-// Wifi connection icon
-#define WIFI_ICON_CIRCLE_X                290
-#define WIFI_ICON_CIRCLE_Y                 35
-#define WIFI_ICON_CIRCLE_MAX_RAD           21
-#define WIFI_ICON_CIRCLE_RADIUS_DIFF        7
-#define WIFI_ICON_ICON_COLOR_ON      TFT_CYAN
-#define WIFI_ICON_ICON_COLOR_OFF TFT_DARKGREY
-
-// Bluetooth connection icon
-#define BLT_ICON_START_X            245
-#define BLT_ICON_START_Y             11
-#define BLT_ICON_WIDTH               15
-#define BLT_ICON_HEIGHT              25
-#define BLT_ICON_COLOR_ON      TFT_CYAN
-#define BLT_ICON_COLOR_OFF TFT_DARKGREY
 
 // Define a common logger for all classes if in debug mode
 #if defined(DEBUG_LOG) || defined(DEBUG_CONFIG_CREATOR) 
@@ -189,12 +164,12 @@ void decideBltConnectionIcon(){
     if(bltConnectedPrevVal == true){
       return; // if the bluetooth connection status is the same as before - do nothing
     }
-    drawBltConnectionIcon(); // if different - draw the icon
+    drawBltConnectionIcon(tft, bleDeviceConnected); // if different - draw the icon
   }else{
     if(bltConnectedPrevVal == false){
       return; // if the bluetooth connection status is the same as before - do nothing
     }
-    drawBltConnectionIcon(); // if different - draw the icon
+    drawBltConnectionIcon(tft, bleDeviceConnected); // if different - draw the icon
   }
 }
 
@@ -545,10 +520,10 @@ void drawRemote(){
     tft.drawLine(15, 16, 15, 20, ARROW_COLOR);
 
     // Draw wifi connection status icon
-    drawWiFiConnectionIcon();
+    drawWiFiConnectionIcon(tft, wifiDeviceConnected);
 
     // Draw bluetooth connection status icon
-    drawBltConnectionIcon();
+    drawBltConnectionIcon(tft, bleDeviceConnected);
   }
 }
 
@@ -559,47 +534,13 @@ void decideWiFiConnectionIcon(){
     if(wifiConnectedPrevVal == true){
       return; // if the wifi connection status is the same as before - do nothing
     }
-    drawWiFiConnectionIcon(); // if different - draw the icon
+    drawWiFiConnectionIcon(tft, wifiDeviceConnected); // if different - draw the icon
   }else{
     if(wifiConnectedPrevVal == false){
       return; // if the wifi connection status is the same as before - do nothing
     }
-    drawWiFiConnectionIcon(); // if different - draw the icon
+    drawWiFiConnectionIcon(tft, wifiDeviceConnected); // if different - draw the icon
   }
-}
-
-void drawWiFiConnectionIcon(){
-  // empty the region for new icon
-  tft.drawRect(WIFI_ICON_CIRCLE_X - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_MAX_RAD * 2, WIFI_ICON_CIRCLE_MAX_RAD * 2, DEFAULT_BG_COLOR);
-
-  // draw 3 circles
-  for(int i = 0; i < 3; i++){
-    tft.drawCircle(WIFI_ICON_CIRCLE_X, WIFI_ICON_CIRCLE_Y, WIFI_ICON_CIRCLE_MAX_RAD - WIFI_ICON_CIRCLE_RADIUS_DIFF * i, wifiDeviceConnected == CONNECTED ? WIFI_ICON_ICON_COLOR_ON : WIFI_ICON_ICON_COLOR_OFF);
-  }
-
-  // use 2 triangles to mask the 3 circles into 3 arcs
-  tft.fillTriangle(WIFI_ICON_CIRCLE_X - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y + WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_X + WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_X + WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y + WIFI_ICON_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
-  tft.fillTriangle(WIFI_ICON_CIRCLE_X + WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y + WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_X - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_X - WIFI_ICON_CIRCLE_MAX_RAD, WIFI_ICON_CIRCLE_Y + WIFI_ICON_CIRCLE_MAX_RAD, DEFAULT_BG_COLOR);
-}
-
-void drawBltConnectionIcon(){
-  // decide the color according to connection status
-  uint32_t color;
-  if(bleDeviceConnected){
-    color = BLT_ICON_COLOR_ON;
-  }else{
-    color = BLT_ICON_COLOR_OFF;
-  }
-
-  // empty the region for new icon
-  tft.drawRect(BLT_ICON_START_X, BLT_ICON_START_Y, BLT_ICON_WIDTH, BLT_ICON_HEIGHT, DEFAULT_BG_COLOR);
-
-  // draw the bluetooth icon
-  tft.drawLine(BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
-  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, color);
-  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y, BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y + BLT_ICON_HEIGHT, color);
-  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH * 1/2, BLT_ICON_START_Y + BLT_ICON_HEIGHT, BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, color);
-  tft.drawLine(BLT_ICON_START_X + BLT_ICON_WIDTH, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 3/4, BLT_ICON_START_X, BLT_ICON_START_Y + BLT_ICON_HEIGHT * 1/4, color);
 }
 
 void emitData(Command *command){
