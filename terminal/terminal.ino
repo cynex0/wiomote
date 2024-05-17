@@ -31,7 +31,7 @@
 #define RIGHT_BTN_INDEX 2 // -3 in the app
 #define DOWN_BTN_INDEX  3 // -4 in the app
 #define LEFT_BTN_INDEX  4 // -5 in the app
-#define OK_BTN_INDEX 5    // -6 in the app
+#define OK_BTN_INDEX    5 // -6 in the app
 
 // Motor pin
 #define MO_PIN D0
@@ -169,7 +169,9 @@ class BluetoothCallbacks: public BLECharacteristicCallbacks {
     }
 };
 
+// Define behaviour when an mqtt message arrives
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  // Read the payload into a c_string
   char* buff_p = new char[length];
   for (int i = 0; i < length; i++) {
     buff_p[i] = (char) payload[i];
@@ -188,8 +190,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     if (mode == TerminalMode::EMIT) { // if in emit mode, emit the signal
       emitData(command);
     } else { // if in cloning mode, register the received button for cloning
-      chosenButton = -1 * (command->getKeyCode() + 1);
-      chosenFromApp = true;
+      chosenButton = -1 * (command->getKeyCode() + 1); // convert the keyCode to button index to allow inserting into command array
+      chosenFromApp = true; // flag to bypass waiting for a physical button press
     }
     delete command; // free the memory used for received command
   }
@@ -296,7 +298,6 @@ void updateNetwork() {
     #endif
 
     wifiDeviceConnected = CONNECTED;
-
     mqttClient->update();
   } 
   else {
@@ -339,27 +340,31 @@ int getButtonPressedIndex(){
 }
 
 const char* getButtonName(const int index) {
+  if (index >= BTN_COUNT) return "CUSTOM";
+
   char* out;
+
   switch(index) {
-    case POWER_BTN_INDEX:
-      out = "POWER"; 
-      break;
-    case UP_BTN_INDEX:
-      out = "UP";
-      break;
-    case RIGHT_BTN_INDEX:
-      out = "RIGHT";
-      break;
-    case DOWN_BTN_INDEX:
-      out = "DOWN";
-      break;
-    case LEFT_BTN_INDEX:
-      out = "LEFT";
-      break;
-    case OK_BTN_INDEX:
-      out = "OK";
-      break;
+  case POWER_BTN_INDEX:
+    out = "POWER"; 
+    break;
+  case UP_BTN_INDEX:
+    out = "UP";
+    break;
+  case RIGHT_BTN_INDEX:
+    out = "RIGHT";
+    break;
+  case DOWN_BTN_INDEX:
+    out = "DOWN";
+    break;
+  case LEFT_BTN_INDEX:
+    out = "LEFT";
+    break;
+  case OK_BTN_INDEX:
+    out = "OK";
+    break;
   }
+
   return out;
 }
 
@@ -367,6 +372,11 @@ const char* getButtonName(const int index) {
 int convertIndexToKeyCode(const int index) { // Converts the index of the button to the app's key code
   if(index > BTN_COUNT - 1) return index - BTN_COUNT;
   return -1 * (index + 1);
+}
+
+int convertKeyCodeToIndex(const int keyCode) {
+  if(keyCode >= 0) return keyCode + BTN_COUNT;
+  return -1 * (keyCode + 1); 
 }
 
 
@@ -403,16 +413,18 @@ void updateVibration() { // Turns off vibration after set duration
 void emitData(Command *command){
   if (command != nullptr){
 	  if(command->getDataLength() == 0) return; // command is empty, do nothing
-      emitter.send(command->getRawData(), command->getDataLength(), CARRIER_FREQUENCY_KHZ);
-      ui.playEmitSignalAnimation();
 
-      #ifdef DEBUG_LOG
-        logger->logIR(command);
-      #endif
+    emitter.send(command->getRawData(), command->getDataLength(), CARRIER_FREQUENCY_KHZ);
+    ui.playEmitSignalAnimation();
+
+    #ifdef DEBUG_LOG
+      logger->logIR(command);
+    #endif
   }
 }
 
 void switchMode() {
+  // Switches between the 2 normal (non-developer) modes
   if (mode == TerminalMode::CLONE) 
     changeMode(TerminalMode::EMIT);
   else if (mode == TerminalMode::EMIT)
@@ -434,10 +446,6 @@ void changeMode(TerminalMode newMode){
     mqttClient->publishWithLog(TOPIC_CURRENT_MODE, "CLONE");
   else if (mode == TerminalMode::EMIT)
     mqttClient->publishWithLog(TOPIC_CURRENT_MODE, "EMIT");
-  
-  if (mode != TerminalMode::CLONE){
-    receiver.disableIRIn();
-  }
 }
 
 #ifdef DEBUG_CONFIG_CREATOR
@@ -456,8 +464,12 @@ void switchConfigMode(){ // Switches between config mode and normal mode
 
 void receive() {
   int pressedButton = getButtonPressedIndex();
-  if ((pressedButton != -1 || chosenFromApp) && (pressedButton != chosenButton || mappingToCustomButton)) {
-    if(!chosenFromApp) chosenButton = pressedButton;
+  bool buttonPressed = (pressedButton != -1 || chosenFromApp);          // check if a button was pressed physically or in the app
+  bool selectionChanged = (pressedButton != chosenButton);              // check if the user selected a new button
+  if (buttonPressed && (selectionChanged || mappingToCustomButton)) {   // start waiting for an ir signal if a new button was chosen, or if mapping to a custom button
+    if(!chosenFromApp) {
+      chosenButton = pressedButton; // if the button is chosen from the app, the index is already assigned in mqttCallback
+    } 
 
     ui.drawButtonSelected(mappingToCustomButton ? "CUSTOM" : getButtonName(chosenButton));
     
@@ -466,31 +478,30 @@ void receive() {
     pressedButton = -1;
   }
   
-  // wait until a button is pressed
+  // Wait until a button is chosen
   if (chosenButton != -1) {
-    receiver.enableIRIn(); // Enable receiving only after a button is pressed
+    receiver.enableIRIn(); // Enable receiving only after a button is chosen
     // NOTE: IR input is automatically disabled after a signal is received
 
-	  if (receiver.getResults()){
+	  if (receiver.getResults()) { // When a signal is received, create a Command
 		  uint8_t dataLength = recvGlobal.recvLength;
 		  uint16_t *rawData = new uint16_t[dataLength];
 
       for (uint8_t i = 1; i < dataLength; i++) {
         rawData[i - 1] = recvGlobal.recvBuffer[i];
       }
-
       rawData[dataLength - 1] = 1000; // Arbitrary trailing space
 
       Command* command;
       if (!mappingToCustomButton) { // If mapping to a physycal button, save command on the terminal
-        command = new Command(rawData, dataLength, convertIndexToKeyCode(chosenButton));
+        command = new Command(rawData, dataLength, convertIndexToKeyCode(chosenButton));  // chosenButton is an array index, needs to be converted to global keyCode
         commandMap[chosenButton] = command; // Write the received command to the map
       } else {
         // if recording a custom button, chosenButton is sent from the app and is already a keyCode
         command = new Command(rawData, dataLength, chosenButton); 
       }
 
-      const char* jsonCommand = command->serialize(getButtonName(-1 * (command->getKeyCode() + 1)));
+      const char* jsonCommand = command->serialize(getButtonName(convertKeyCodeToIndex(command->getKeyCode())));
       mqttClient->publishWithLog(TOPIC_IR_OUT, jsonCommand);
       delete[] jsonCommand;
 

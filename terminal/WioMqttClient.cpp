@@ -3,7 +3,6 @@
 
 // Create a client without logging
 WioMqttClient::WioMqttClient(WiFiClient wifiClient_, MqttCallback mqttCallback_): 
-  // initialize members via initializer list
   wifiClient(wifiClient_),
   mqttClient(wifiClient),
   callback(mqttCallback_), 
