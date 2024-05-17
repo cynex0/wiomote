@@ -12,7 +12,7 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 	- [System Design](#system-design)
 	- [Dependencies \& Requirements](#dependencies--requirements)
 	- [System Sensors](#system-sensors)
-	- [Instalation \& Usage](#instalation--usage)
+	- [Instalation](#instalation)
 		- [Flashing WIO binaries](#flashing-wio-binaries)
 		- [Installing Android app](#installing-android-app)
 	- [Acknowledgments](#acknowledgments)
@@ -71,14 +71,14 @@ https://files.seeedstudio.com/arduino/package_seeeduino_boards_index.json
 
 The team has considered the following sensors:
 
-| Sensor                                       | URL                                                           |
+| Sensor & Actuators                           | URL                                                           |
 |----------------------------------------------|---------------------------------------------------------------|
 | Infrared Emitter (Grove - Infrared Emitter)  | [link](https://wiki.seeedstudio.com/Grove-Infrared_Emitter)   |
 | Infrared Receiver (Grove - Infrared Receiver)| [link](https://wiki.seeedstudio.com/Grove-Infrared_Receiver/) |
 | Buzzer (built-in)                            | -                                                             |
 | Vibration Motor (Grove - Vibration Motor)    | [link](https://wiki.seeedstudio.com/Grove-Vibration_Motor/)   |
 
-## Instalation & Usage
+## Instalation
 
 ### Flashing WIO binaries
 
@@ -96,7 +96,8 @@ arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_ter
 ### Installing Android app
 
 1. Download the compiled Android app: [![Download Latest APK](https://img.shields.io/badge/Download-APK-d94a34.svg?logo=android&logoColor=white&color=green)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/app/build/outputs/apk/release/app-release.apk?job=build_android)
-2. Run the downloaded file from your Android device. **NOTE:** Your device might request you to allow installation of unknown apps from unknown sources. This is normal and is required to install any third party application.
+2. Run the downloaded file from your Android device. 
+**NOTE:** Your device might request you to allow installation of unknown apps from unknown sources. This is normal and is required to install any third party application.
 
 
 ## Acknowledgments
