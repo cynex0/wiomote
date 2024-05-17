@@ -95,6 +95,12 @@ arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_ter
 
 For detailed instructions and a complete guide to using all the features, please refer to the [user manual](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/wikis/documentation/User%20Manual).
 
+## Demo
+
+Curious to see how it works in action? Check out our demo video on [YouTube](https://youtu.be/9HRPDOEo8KA)!
+
+[![Video Thumbnail](assets/Thumbnail.png){width=300px}](https://youtu.be/9HRPDOEo8KA)
+
 ## Acknowledgments
 
 The project is being built on:
