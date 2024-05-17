@@ -6,18 +6,7 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 
 ## Table of Contents
 
-- [WIOmote](#wiomote)
-	- [Table of Contents](#table-of-contents)
-	- [Project Description](#project-description)
-	- [System Design](#system-design)
-	- [Dependencies \& Requirements](#dependencies--requirements)
-	- [System Sensors](#system-sensors)
-	- [Instalation](#instalation)
-		- [Flashing WIO binaries](#flashing-wio-binaries)
-		- [Installing Android app](#installing-android-app)
-	- [Acknowledgments](#acknowledgments)
-        - [Team members and contributions](#team-members-and-contributions)
-	- [License](#license)
+[[_TOC_]]
 
 ## Project Description
 
@@ -33,7 +22,9 @@ For basic functions like turning on and off or basic navigation, the terminal ca
 ## Purpose and Benefits
 
 The WIOmote is intended to be a convenient and straightforward solution in managing multiple devices by centralizing the point of usage into one single device, accompanied by a simple and easily navigable interface for a seamless experience.
+\
 Since the WIOmote is highly customizable, it is an excellent solution for users with limited vision or mobility, as well as for the family. The app allows creation of custom remote profiles, custom names for buttons as well as switching between remote configuration profiles, giving the user a lot of freedom in tailoring their experience.
+\
 Furthermore, the WIOmote also suffices as an environmentally friendly alternative to physical remotes, as it can both serve as a back-up for existing remotes as well as replacing them. ’no more need to buy a new remote if it breaks, since it can easily be stored as one of many remote configurations in the app, saving both money and the environment.
 
 ## System Design
@@ -97,8 +88,12 @@ arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_ter
 
 1. Download the compiled Android app: [![Download Latest APK](https://img.shields.io/badge/Download-APK-d94a34.svg?logo=android&logoColor=white&color=green)](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/jobs/artifacts/main/raw/app/build/outputs/apk/release/app-release.apk?job=build_android)
 2. Run the downloaded file from your Android device. 
+\
 **NOTE:** Your device might request you to allow installation of unknown apps from unknown sources. This is normal and is required to install any third party application.
 
+## Usage
+
+For detailed instructions and a complete guide to using all the features, please refer to the [user manual](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/wikis/documentation/User%20Manual).
 
 ## Acknowledgments
 
