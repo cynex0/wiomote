@@ -10,12 +10,9 @@ A wireless controlled configurable remote built on the [WIO Terminal](https://ww
 
 ## Project Description
 
-The project is named “*WIOmote*”, symbolizes the integration of the Wio Seed Terminal as the core device with the functionality of a remote, representing the product's purpose.
+The project is named “*WIOmote*”, symbolizes the integration of the Seed Wio Terminal as the core device with the functionality of a remote, representing the product's purpose.
 \
-\
-The product in itself is a universal remote, which is intended to serve as a substitute for standard infrared based remotes, consolidating control of several devices into one.
-This is achieved using an IR sensor and emitter, navigated by a wirelessly connected device. It allows for the collection of numerous configurations, as well as providing users with the option to share their configurations. Users can also send commands to a terminal for immediate action or schedule them for later execution.
-\
+The product in itself is a universal remote, which is intended to serve as a substitute for standard infrared based remotes, consolidating control of several devices into one. This is achieved using an IR sensor and emitter, navigated by a wirelessly connected device. Users can access or create numerous configurations from which commands can be sent to a terminal for immediate action.
 \
 For basic functions like turning on and off or basic navigation, the terminal can operate independently of a mobile device but is intended to be paired with a device to access the more advanced features.
 
