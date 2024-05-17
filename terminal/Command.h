@@ -13,6 +13,7 @@ private:
   short keyCode; // global keyCode, negative for physical
 
 public:
+  Command();
   Command(const char* jsonString); // create Command instance from a jsonString
   Command(uint16_t *rawData, uint8_t dataLength, short keyCode); // create Command instance by defining all members
   ~Command(); // destructor

@@ -697,7 +697,7 @@ void receive() {
       Command* recCommand = new Command(rawData, dataLength, chosenButton);
 
       if (!mappingToCustomButton) { // If mapping to a physycal button, save command on the terminal
-        // delete[] commandMap[chosenButton]; // delete the previously stored data
+        if (commandMap[chosenButton] != nullptr) delete[] commandMap[chosenButton]; // delete the previously stored data
         commandMap[chosenButton] = recCommand; // Write the received command to the map
       }
 
@@ -795,6 +795,9 @@ void setup() {
   while(!Serial); // Wait for serial
   #endif
 
+  for (int i = 0; i < BTN_COUNT; i++)
+    commandMap[i] == nullptr; // initialize array with null pointers to avoid garbage data
+
   setupWiFi();
   mqttClient = new WioMqttClient(wifiClient, *mqttCallback);
   mqttClient->setup();
@@ -862,7 +865,7 @@ void loop() {
     if (pressed != -1) {
       Command *command = commandMap[pressed];
 
-      if (command->getDataLength() != 0){
+      if (command != nullptr && command->getDataLength() != 0){
         emitData(command);
 
         startVibration(); // Vibrate after data sent
@@ -902,17 +905,17 @@ void loop() {
   #ifdef DEBUG_UI
     tft.setTextSize(TEXT_SIZE_M);
 
-    if (commandMap[POWER_BTN_INDEX].dataLength != 0) {
+    if (commandMap[POWER_BTN_INDEX] != nullptr) {
       tft.drawString(F("POWER"), 20, 20);
-    } else if (commandMap[UP_BTN_INDEX].dataLength != 0) {
+    } else if (commandMap[UP_BTN_INDEX] != nullptr) {
       tft.drawString(F("UP"), 20, 40);
-    } else if (commandMap[LEFT_BTN_INDEX].dataLength != 0) {
+    } else if (commandMap[LEFT_BTN_INDEX] != nullptr) {
       tft.drawString(F("LEFT"), 20, 60);
-    } else if (commandMap[RIGHT_BTN_INDEX].dataLength != 0) {
+    } else if (commandMap[RIGHT_BTN_INDEX] != nullptr) {
       tft.drawString(F("RIGHT"), 20, 80);
-    } else if (commandMap[DOWN_BTN_INDEX].dataLength != 0) {
+    } else if (commandMap[DOWN_BTN_INDEX] != nullptr) {
       tft.drawString(F("DOWN"), 20, 100);
-    } else if (commandMap[PRESS_BTN_INDEX].dataLength != 0) {
+    } else if (commandMap[PRESS_BTN_INDEX] != nullptr) {
       tft.drawString(F("OK"), 20, 120);
     }
   #endif

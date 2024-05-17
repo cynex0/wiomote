@@ -1,7 +1,17 @@
 #include "Command.h"
 #include <ArduinoJson.h>
 
-Command::Command(const char* jsonString) {
+Command::Command():
+  rawData(new uint16_t[0]),
+  dataLength(0),
+  keyCode(0)
+{}
+
+Command::Command(const char* jsonString):
+  rawData(new uint16_t[0]),
+  dataLength(0),
+  keyCode(0) 
+{
   deserialize(jsonString);
 }
 
@@ -27,12 +37,12 @@ void Command::deserialize(const char* jsonString) {
   JsonDocument* doc = new JsonDocument;
   deserializeJson(*doc, jsonString);
   
+  if (dataLength != 0) delete[] rawData; // Free previously used memory
+
   keyCode = (*doc)[F("keyCode")]; 
-
   dataLength = (*doc)[F("command")][F("dataLength")];
+  
   JsonArray rawDataJson = (*doc)[F("command")][F("rawData")];
-
-  // delete[] rawData; // Free previously used memory
   rawData = new uint16_t[dataLength];
   for (uint8_t i = 0; i < dataLength; i++) {
     rawData[i] = rawDataJson[i];
