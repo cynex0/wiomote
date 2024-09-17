@@ -4,9 +4,6 @@
 \
 A wireless controlled configurable remote built on the [WIO Terminal](https://www.seeedstudio.com/Wio-Terminal-p-4509.html).
 
-## Table of Contents
-
-[[_TOC_]]
 
 ## Project Description
 
@@ -15,6 +12,12 @@ The project is named “*WIOmote*”, symbolizes the integration of the Seed Wio
 The product in itself is a universal remote, which is intended to serve as a substitute for standard infrared based remotes, consolidating control of several devices into one. This is achieved using an IR sensor and emitter, navigated by a wirelessly connected device. Users can access or create numerous configurations from which commands can be sent to a terminal for immediate action.
 \
 For basic functions like turning on and off or basic navigation, the terminal can operate independently of a mobile device but is intended to be paired with a device to access the more advanced features.
+
+## Demo
+
+Curious to see how it works in action? Check out our demo video on [YouTube](https://youtu.be/9HRPDOEo8KA)!
+
+[![Video Thumbnail](assets/Thumbnail.png)](https://youtu.be/9HRPDOEo8KA)
 
 ## Purpose and Benefits
 
@@ -92,11 +95,6 @@ arduino-cli upload -i <path to terminal.ino.bin> -b Seeeduino:samd:seeed_wio_ter
 
 For detailed instructions and a complete guide to using all the features, please refer to the [user manual](https://git.chalmers.se/courses/dit113/2024/group-9/wiomote/-/wikis/documentation/User%20Manual).
 
-## Demo
-
-Curious to see how it works in action? Check out our demo video on [YouTube](https://youtu.be/9HRPDOEo8KA)!
-
-[![Video Thumbnail](assets/Thumbnail.png){width=300px}](https://youtu.be/9HRPDOEo8KA)
 
 ## Acknowledgments
 
